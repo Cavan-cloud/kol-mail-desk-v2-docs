@@ -1,0 +1,27 @@
+{
+  "description": "Path-based risk classification for Cursor agent operations.",
+  "tiers": {
+    "low": [
+      "kol-mail-desk-v2-docs/**",
+      "kol-mail-desk-v2-web/components/**",
+      "kol-mail-desk-v2-web/app/**/page.tsx",
+      "**/README.md"
+    ],
+    "medium": [
+      "kol-mail-desk-v2-backend/src/main/java/**/controller/**",
+      "kol-mail-desk-v2-backend/src/main/java/**/dto/**",
+      "kol-mail-desk-v2-web/lib/api-client/**"
+    ],
+    "high": [
+      "kol-mail-desk-v2-backend/src/main/java/**/security/**",
+      "kol-mail-desk-v2-backend/src/main/java/**/integration/**",
+      "kol-mail-desk-v2-backend/src/main/resources/db/migration/**",
+      "kol-mail-desk-v2-backend/src/main/java/**/oauth/**"
+    ]
+  },
+  "policies": {
+    "low": "Agent may edit freely with normal review.",
+    "medium": "Agent proposes changes; human reviewer required before merge.",
+    "high": "No agent autonomy. Requires human author + reviewer + tests."
+  }
+}

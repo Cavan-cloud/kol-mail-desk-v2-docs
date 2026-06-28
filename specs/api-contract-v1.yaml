@@ -1,0 +1,22 @@
+openapi: 3.0.3
+info:
+  title: Kol Mail Desk v2 API
+  version: 0.0.1
+  description: |
+    Source of truth for the backend ↔ frontend contract.
+    Endpoints are added per phase. See specs/phases.md.
+
+servers:
+  - url: http://localhost:8080
+    description: Local dev
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+
+components:
+  schemas: {}

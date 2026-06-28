@@ -1,0 +1,42 @@
+# Lychee 链接检查配置
+# 文档：https://lychee.cli.rs/usage/config/
+
+# 允许的协议
+scheme = ["https", "http"]
+
+# 把所有相对路径（含 ../ 跨仓库引用）从检查中排除：
+# v2 三仓库目前未发布到 GitHub，跨仓库相对路径在 CI runner 上拿不到。
+# 仓库内部 markdown ↔ markdown 链接由 markdownlint 的 MD051/052 保障。
+exclude_path = [
+  "node_modules",
+  ".git"
+]
+
+# URL 排除模式（regex）
+exclude = [
+  # 跨仓库相对路径
+  "^\\.\\./",
+  # GitHub Actions badge 占位 URL（Org 待定，P0-T11 后替换）
+  "^https://github\\.com/ORG/",
+  # localhost / 内网示例 URL
+  "^https?://localhost",
+  "^https?://127\\.0\\.0\\.1",
+  # 数据库 / Redis 等本地服务示例 URL
+  "^postgres(ql)?://",
+  "^redis://"
+]
+
+# 并发与超时
+max_concurrency = 8
+timeout = 20
+max_retries = 2
+retry_wait_time = 2
+
+# 校验 fragment（章节锚点）
+include_fragments = "full"
+
+# 不检查 mailto:
+include_mail = false
+
+# 接受的状态码（404 仍 fail）
+accept = ["200..=299", "301", "302", "307", "308"]
