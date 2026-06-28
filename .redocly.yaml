@@ -1,0 +1,23 @@
+# Redocly OpenAPI Lint 配置
+# Phase 0：契约只有 /api/v1/health 占位，使用 minimal 规则集避免误报。
+# Phase 1 起逐步收紧（详见 specs/04-phases.md § Phase 1 进入准入）。
+
+extends:
+  - minimal
+
+rules:
+  # 显式打开几个我们关心的硬约束（即使在 minimal 下也强制）
+  no-invalid-media-type-examples: error
+  no-server-trailing-slash: error
+  no-empty-servers: error
+  spec: error
+
+  # 显式关闭骨架期不该卡的规则
+  operation-operationId: off          # 后端实现时再补
+  operation-description: off          # 契约 review 期再补
+  operation-summary: off              # 同上
+  operation-2xx-response: off         # 健康检查只有 200
+  info-contact: off                   # info 段后续补 contact
+  info-license: off                   # 内部项目暂无 license
+  tag-description: off                # tags 接入后再补
+  no-ambiguous-paths: off             # 路径稳定后再开

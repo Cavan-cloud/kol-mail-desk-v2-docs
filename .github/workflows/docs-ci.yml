@@ -54,8 +54,19 @@ jobs:
             --cache
             --max-cache-age 1d
             --config lychee.toml
+            --verbose
             './**/*.md'
           fail: true
+          format: detailed
+          output: ./lychee-report.md
+
+      - name: Upload Lychee report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lychee-report
+          path: lychee-report.md
+          retention-days: 14
 
   openapi-lint:
     name: OpenAPI lint (Redocly)
@@ -71,4 +82,4 @@ jobs:
           node-version: '20'
 
       - name: Redocly lint
-        run: npx --yes @redocly/cli@latest lint specs/api-contract-v1.yaml
+        run: npx --yes @redocly/cli@latest lint --config .redocly.yaml specs/api-contract-v1.yaml

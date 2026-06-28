@@ -32,8 +32,10 @@ timeout = 20
 max_retries = 2
 retry_wait_time = 2
 
-# 校验 fragment（章节锚点）
-include_fragments = "full"
+# fragment（章节锚点）默认不检查：
+# 中文标题被 GitHub / lychee 各自 slug 算法转出的 anchor 不一致，
+# 严格 fragment 检查会大量误报。等纯英文 docs（如 OpenAPI yaml）独立检查再开。
+# include_fragments = "full"
 
 # 不检查 mailto:
 include_mail = false

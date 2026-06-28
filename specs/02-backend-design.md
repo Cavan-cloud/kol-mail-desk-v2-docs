@@ -178,10 +178,12 @@ Cron 每 1 分钟扫描（替代旧版每天一次）。
 
 - 保存设置（角色、mentor、`feishu_operator_name`）
 - 保存运营名后**批量归属**：
+
   ```sql
   UPDATE kols SET owner_user_id = :userId
   WHERE feishu_operator_name = :name AND owner_user_id IS NULL;
   ```
+
 - 标记离职：
   - `profiles.status = 'departed'`
   - 名下 `kols.status` 改为 `orphaned`
