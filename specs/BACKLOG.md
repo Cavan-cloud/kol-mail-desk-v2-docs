@@ -80,7 +80,7 @@
 
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
-| P1-T01 | Maven 父 POM + 8 子模块骨架 + ArchUnit 守护 | backend | 1.5d |
+| P1-T01 | Maven 父 POM + 8 子模块骨架 + ArchUnit 守护 | backend | 1.5d | ✅ |
 | P1-T02 | Flyway 基础迁移 V1（profiles / tenants / kols / emails / ...） | infrastructure | 2d |
 | P1-T03 | MyBatis-Plus 全局配置（Interceptor 链路 + MetaObjectHandler + TypeHandler） | infrastructure | 1d |
 | P1-T04 | Spring Security + Google OAuth2 登录走通 | api + infrastructure | 2d |

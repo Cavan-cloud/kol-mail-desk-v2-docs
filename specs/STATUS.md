@@ -9,8 +9,8 @@
 
 | 字段 | 值 |
 |------|-----|
-| 最后更新 | 2026-06-28 13:25 (UTC+8) |
-| 更新者 | Agent (Claude) — 完成 P0-T11（三仓库 git init + 首次 commit + push 到 Cavan-cloud），Phase 0 全部完成 |
+| 最后更新 | 2026-06-28 15:46 (UTC+8) |
+| 更新者 | Agent — 完成 P1-T01（mvn verify 本地通过） |
 | Git 提交 | 三仓库首次 commit 已完成并推送到 `github.com/Cavan-cloud/kol-mail-desk-v2-{backend,web,docs}` main 分支 |
 | 项目相对天数 | D0（计划期） |
 | 工作模式 | **multi-root workspace**：`~/code/maildesk-v2.code-workspace`（已创建） |
@@ -19,11 +19,22 @@
 
 ## 当前 Phase
 
-**Phase 0 — 骨架与 Harness（✅ 已完成，等待进入 Phase 1）**
+**Phase 1 — 只读核心 API + 前端壳（进行中，1/18 完成）**
 
-详见 [`04-phases.md` § Phase 0](./04-phases.md#phase-0--骨架与-harness)。
+Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phases.md#phase-1--只读核心-api--前端壳)。
 
-### Phase 0 完成度
+### Phase 1 完成度
+
+| Ticket | 描述 | 状态 |
+|--------|------|------|
+| P1-T01 | Maven 父 POM + 8 子模块骨架 + ArchUnit 守护 | ✅ |
+| P1-T02 ~ P1-T18 | （见 BACKLOG.md） | ⬜ |
+
+完成进度：**1 / 18 ≈ 6%**
+
+---
+
+### Phase 0 完成度（已完成）
 
 | Ticket | 描述 | 状态 |
 |--------|------|------|
@@ -45,18 +56,13 @@
 
 ## 当前活跃 ticket
 
-**无 — Phase 0 全部完成，等待人工挑选 Phase 1 起始 ticket**
+**无 — 等待人工挑选 Phase 1 下一 ticket**
 
-Phase 1 推荐起点（按依赖顺序）：
+推荐下一项（按依赖）：
 
-- **P1-T01** Maven 父 POM + 8 子模块骨架 + ArchUnit 守护 — 无前置依赖，~1.5 人日（**强烈推荐先做，给后续所有后端 ticket 立柱子**）
-- **P1-T11** OpenAPI 契约填充 Phase 1 全部端点 — 无前置依赖，~1 人日（可与 P1-T01 并行做，先把契约钉住）
-- **P1-T12** Next.js 项目初始化 + Tailwind / globals.css 迁入 — 无前置依赖，~1 人日（前端起手）
-
-进入 Phase 1 前还应：
-
-1. 重新读一遍 `04-phases.md § Phase 1 进入准入`，确认 8 项准入全部 ✅
-2. 在 Cavan-cloud 三个 GitHub repo 开启 branch protection（main 分支禁止 force push，PR 必须过 CI）
+- **P1-T02** Flyway 基础迁移 V1 — 依赖 P1-T01 ✅，~2 人日
+- **P1-T11** OpenAPI 契约填充 — 无前置，~1 人日（可与 T02 并行）
+- **P1-T12** Next.js 项目初始化 — 无前置，~1 人日（前端，可并行）
 
 ---
 
