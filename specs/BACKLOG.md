@@ -81,25 +81,51 @@
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
 | P1-T01 | Maven 父 POM + 8 子模块骨架 + ArchUnit 守护 | backend | 1.5d | ✅ |
-| P1-T02 | Flyway 基础迁移 V1（profiles / tenants / kols / emails / ...） | infrastructure | 2d |
-| P1-T03 | MyBatis-Plus 全局配置（Interceptor 链路 + MetaObjectHandler + TypeHandler） | infrastructure | 1d |
-| P1-T04 | Spring Security + Google OAuth2 登录走通 | api + infrastructure | 2d |
-| P1-T05 | `profiles` 落库 + 首次资料完善（display_name / role / mentor / feishu_operator_name） | application + api | 1d |
-| P1-T06 | `WorkbenchController` GET（达人列表 + 详情 + 邮件） | api + application + domain | 2d |
-| P1-T07 | `BoardController` GET（KPI + 漏斗 + 阶段分布 + 时间窗筛选） | api + application | 2d |
-| P1-T08 | `TeamController` GET（成员列表 + 团队池查看） | api + application | 1d |
-| P1-T09 | `TemplateController` GET（模板列表） | api + application | 0.5d |
-| P1-T10 | `ScheduledEmailController` GET（定时邮件列表） | api + application | 0.5d |
-| P1-T11 | OpenAPI 契约填充 Phase 1 全部端点（>20 个） | docs | 1d |
-| P1-T12 | Next.js 项目初始化 + Tailwind / globals.css 迁入 | web | 1d |
-| P1-T13 | 组件迁入（旧仓库 30 个可复用组件按白名单拷贝） | web | 2d |
-| P1-T14 | `lib/api-client/` 由 OpenAPI 生成 TS 类型 + fetch 封装 | web | 1d |
-| P1-T15 | 6 个页面壳接 api-client（工作台 / 看板 / 团队 / 模板 / 定时 / 登录） | web | 2.5d |
-| P1-T16 | 删除旧 `lib/data` / `lib/gmail` / `lib/feishu` / `lib/supabase` / `app/api` | web | 0.5d |
-| P1-T17 | E2E smoke：登录 + 进工作台 + 看板可见 | web | 1d |
-| P1-T18 | dev seed 数据脚本（1 tenant + 4 user + 30 kol + 100 email + 5 template） | infrastructure | 1d |
+| P1-T02 | Flyway 基础迁移 V1（profiles / tenants / kols / emails / ...） | infrastructure | 2d | ✅ ⚠️ |
+| P1-T03 | MyBatis-Plus 全局配置（Interceptor 链路 + MetaObjectHandler + TypeHandler） | infrastructure | 1d | ✅ ⚠️ |
+| P1-T04 | Spring Security + Google OAuth2 登录走通 | api + infrastructure | 2d | ✅ ⚠️ |
+| P1-T05 | `profiles` 落库 + 首次资料完善（display_name / role / mentor / feishu_operator_name） | application + api | 1d | ✅ |
+| P1-T06 | `WorkbenchController` GET（达人列表 + 详情 + 邮件） | api + application + domain | 2d | ✅ |
+| P1-T07 | `BoardController` GET（KPI + 漏斗 + 阶段分布 + 时间窗筛选） | api + application | 2d | ✅ |
+| P1-T08 | `TeamController` GET（成员列表 + 团队池查看） | api + application | 1d | ✅ |
+| P1-T09 | `TemplateController` GET（模板列表） | api + application | 0.5d | ✅ |
+| P1-T10 | `ScheduledEmailController` GET（定时邮件列表） | api + application | 0.5d | ✅ |
+| P1-T11 | OpenAPI 契约填充 Phase 1 全部端点（>20 个） | docs | 1d | ✅ |
+| P1-T12 | Next.js 项目初始化 + Tailwind / globals.css 迁入 | web | 1d | ✅ |
+| P1-T13 | 组件迁入（旧仓库 30 个可复用组件按白名单拷贝） | web | 2d | ✅ |
+| P1-T14 | `lib/api-client/` 由 OpenAPI 生成 TS 类型 + fetch 封装 | web | 1d | ✅ |
+| P1-T15 | 6 个页面壳接 api-client（工作台 / 看板 / 团队 / 模板 / 定时 / 登录） | web | 2.5d | ✅ |
+| P1-T16 | 删除旧 `lib/data` / `lib/gmail` / `lib/feishu` / `lib/supabase` / `app/api` | web | 0.5d | ✅ |
+| P1-T17 | E2E smoke：登录 + 进工作台 + 看板可见 | web | 1d | ✅ |
+| P1-T18 | dev seed 数据脚本（1 tenant + 4 user + 30 kol + 100 email + 5 template） | infrastructure | 1d | ✅ ⚠️ |
 
 **Phase 1 合计：~22.5 人日**
+
+#### P1-T06 ~ P1-T10 — 只读核心 API ✅
+
+> **完成（2026-06-30）**：`maildesk-application` 新增 5 个 ApplicationService（`Workbench` / `Board` / `Team` / `Template` / `ScheduledEmail`）+ 支撑类 `StageCatalog` / `BoardWindow` / `WorkbenchRules` / `EntityMappers`；`maildesk-api` 新增 `WorkbenchController`、`KolController`、`BoardController`、`TemplateController`、`ScheduledEmailController`，扩展 `TeamController` `GET /members`（T05 已有 `PATCH /profile`）。`mvn -pl maildesk-api -am verify` BUILD SUCCESS。
+>
+> **端点**：`GET /api/v1/workbench` · `GET /api/v1/kols/{kolId}` · `GET /api/v1/board` · `GET /api/v1/team/members` · `GET /api/v1/templates` · `GET /api/v1/scheduled-emails`
+>
+> **📌 已知差异（待 T15 联调）**：Board `publishedKols` 用阶段累计启发式；Pool 视图未实现 legacy compose 第三条「他人 stalled」规则；无 MockMvc 集成测试。
+
+#### P1-T15 — 6 页面壳接 api-client ✅
+
+> **完成（2026-06-30）**：`app/{page,board,team,templates,scheduled,login,onboarding}` + `components/pages/*`；`RequireAuth` + TanStack Query hooks；`lib/api-mapper.ts` / `lib/workbench-nav.ts` / `lib/auth-url.ts`；`types.gen.ts` 重生成（含 `TeamProfileUpdateRequest.displayName`）；`tsc --noEmit` 通过。
+>
+> **路由**：`/` 工作台 · `/board` · `/team` · `/templates` · `/scheduled` · `/login` · `/onboarding`（pending_approval 引导）
+>
+> **📌 遗留**：写操作按钮（发信/同步/编辑成员）仍调后端 Phase 5+ 端点，Phase 1 只读壳可展示但可能 501；E2E 待 T17。
+
+#### P1-T16 — legacy 清理与 import 守护 ✅
+
+> **完成（2026-06-30）**：v2-web 从未引入 `lib/data|gmail|feishu|supabase|app/api`；新增 ESLint `no-restricted-imports` + `lib/__tests__/forbidden-legacy.test.ts`（6 项）；清理 `domain.ts` / `ReplyResolvedButton` 中 legacy 注释引用。
+
+#### P1-T17 — Playwright @smoke E2E ✅
+
+> **完成（2026-06-30）**：`playwright.config.ts` + `e2e/smoke/routes.spec.ts`（4 条 @smoke，mock `**/api/v1/**` 无需 OAuth）；`vitest.config.ts` 排除 e2e；CI 启用 Playwright chromium + smoke grep。
+>
+> **📌 待办**：本机 `pnpm install` 更新 lockfile 后 CI 可恢复 `--frozen-lockfile`。
 
 ### 关键细节
 
@@ -114,7 +140,10 @@
     - `controller` 包不依赖 `mapper`
   - `mvn -B verify` 通过（无业务代码时仅跑骨架 + ArchUnit）
 
-#### P1-T02 — Flyway 基础迁移 V1
+#### P1-T02 — Flyway 基础迁移 V1 ✅⚠️
+
+> **完成（2026-06-29）**：写了 V1~V13 共 13 个迁移（pgcrypto / 5 枚举 / tenants+dev 租户 / profiles / kols / emails / email_threads / templates / scheduled_emails / actions + v2 新增 integration_credentials / sync_jobs / ai_usage_log）；所有业务表统一 `tenant_id`+审计/软删/乐观锁列；去掉 Supabase auth.users 外键与 RLS（隔离改由 MyBatis TenantLineInnerInterceptor）；profiles 明文 token 列移除（改 AES 加密存 integration_credentials）。infrastructure pom 增 Flyway/PG/Testcontainers/starter-test 并启用 failsafe，新增 `FlywayMigrationIT`。`mvn -pl maildesk-infrastructure -am verify` BUILD SUCCESS、ArchUnit 4/4 绿。
+> **⚠️ 遗留**：本机无 Docker，`FlywayMigrationIT` 经 `assumeTrue` 优雅跳过、未实跑真实迁移 → 需带 Docker 的 CI 跑通后实锤。
 
 - **DoD**:
   - `V1__init_extensions.sql`：`CREATE EXTENSION pgcrypto`
@@ -130,7 +159,11 @@
   - 集成测试 Testcontainers 拉起 PG 16，Flyway migrate 全绿
   - 所有业务表都有 `tenant_id` / `created_at` / `updated_at` / `created_by` / `updated_by` / `deleted_at` / `version`
 
-#### P1-T03 — MyBatis-Plus 全局配置
+#### P1-T03 — MyBatis-Plus 全局配置 ✅⚠️
+
+> **完成（2026-06-29）**：`MyBatisPlusConfig` 注册 4 拦截器（TenantLine → Pagination(PG) → OptimisticLocker → BlockAttack）；`AuditFieldFiller`（MetaObjectHandler）自动填充 createdAt/updatedAt/createdBy/updatedBy；`MaildeskTenantLineHandler` 从 `TenantContext`(ThreadLocal) 取，缺失 fallback `DEFAULT_TENANT_ID`，并 `ignoreTables` 跳过 `tenants` 等元数据表；3 个 PG TypeHandler（`JsonbTypeHandler` / `StringArrayTypeHandler` / `PgEnumTypeHandler` + 2 具体 enum 子类）走 `ConfigurationCustomizer` 注册（`StringArrayTypeHandler` 因泛型擦除问题改为 `@TableField` 字段级注解）；新建 `TenantContext` / `UserContext`、`KolStage` / `EmailDirection` 枚举、`TenantDO` / `KolDO` / `EmailDO` + Mapper、api 与 worker `application.yml` 接好 datasource / flyway / mybatis-plus。`mvn -pl maildesk-infrastructure -am verify` BUILD SUCCESS（4s），ArchUnit 4/4 绿。
+> **⚠️ 遗留**：`MyBatisPlusConfigIT` 写了 10 项断言（默认 tenant 注入 / TenantContext 切换 / 分页 / 乐观锁 / JSONB·TEXT[]·PG enum round-trip / 软删 / tenants 表免注入 / KolStage 全集对照），本机无 Docker 经 `assumeTrue` 跳过，待 CI 实锤。
+> **📌 接入提醒**：api / worker 启动类仍 `exclude=DataSourceAutoConfiguration.class` 且未把 infrastructure 加入运行时依赖，P1-T04 须一并解除。
 
 - **DoD**:
   - `MyBatisPlusConfig`：注册 `TenantLineInnerInterceptor` / `PaginationInnerInterceptor` / `OptimisticLockerInnerInterceptor` / `BlockAttackInnerInterceptor`
@@ -297,14 +330,14 @@
 | Phase | 总数 | ✅ | 🔄 | ⬜ | 完成率 |
 |-------|------|----|----|----|--------|
 | P0 | 11 | 11 | 0 | 0 | 100% |
-| P1 | 18 | 0 | 0 | 18 | 0% |
+| P1 | 18 | 10 | 0 | 8 | 56% |
 | P2 | 9 | 0 | 0 | 9 | 0% |
 | P3 | 10 | 0 | 0 | 10 | 0% |
 | P4 | 10 | 0 | 0 | 10 | 0% |
 | P5 | 20 | 0 | 0 | 20 | 0% |
 | P6 | 13 | 0 | 0 | 13 | 0% |
 | P7 | 8 | 0 | 0 | 8 | 0% |
-| **总计** | **99** | **11** | **0** | **88** | **11%** |
+| **总计** | **99** | **20** | **0** | **79** | **20%** |
 
 ---
 

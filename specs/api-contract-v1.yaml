@@ -1,22 +1,1732 @@
 openapi: 3.0.3
 info:
   title: Kol Mail Desk v2 API
-  version: 0.0.1
+  version: 0.1.0
   description: |
-    Source of truth for the backend ↔ frontend contract.
-    Endpoints are added per phase. See specs/phases.md.
+    后端 ↔ 前端契约的唯一真源（source of truth）。
+    端点按 Phase 增量填充，详见 specs/04-phases.md 与 specs/02-backend-design.md §三。
+    前端通过 `pnpm gen:api` 从本文件生成 TypeScript 类型，禁止手改生成产物。
 
 servers:
   - url: http://localhost:8080
-    description: Local dev
+    description: 本地开发
+
+tags:
+  - name: health
+    description: 健康检查
+  - name: auth
+    description: 认证与登录
+  - name: workbench
+    description: 工作台
+  - name: kol
+    description: KOL（达人）
+  - name: email
+    description: 邮件
+  - name: board
+    description: 数据看板
+  - name: team
+    description: 团队
+  - name: template
+    description: 邮件模板
+  - name: scheduled
+    description: 定时邮件
+  - name: sync
+    description: 同步（Gmail / 飞书）
+  - name: gmail
+    description: Gmail 发信与授权
+  - name: ai
+    description: AI 能力
 
 paths:
   /api/v1/health:
     get:
-      summary: Health check
+      tags: [health]
+      summary: 健康检查
+      operationId: getHealth
+      security: []
       responses:
         '200':
-          description: OK
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: 状态标识
+                    example: UP
+
+  /oauth2/authorization/google:
+    get:
+      tags: [auth]
+      summary: 发起 Google 平台登录（Spring Security 自带，302 跳转）
+      operationId: oauth2AuthorizationGoogle
+      security: []
+      responses:
+        '302':
+          description: 重定向到 Google 授权页
+
+  /login/oauth2/code/google:
+    get:
+      tags: [auth]
+      summary: Google OAuth 回调（Spring Security 自带，处理后 302 回前端）
+      operationId: oauth2CallbackGoogle
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: false
+          description: Google 返回的授权码
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          description: 防 CSRF 的 state 值
+          schema:
+            type: string
+      responses:
+        '302':
+          description: 登录成功后重定向回前端，并通过 HttpOnly Cookie 写入会话
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: 退出登录
+      operationId: logout
+      responses:
+        '204':
+          description: 已退出，清除会话 Cookie
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/me:
+    get:
+      tags: [auth]
+      summary: 获取当前登录用户的资料
+      operationId: getMe
+      responses:
+        '200':
+          description: 当前用户资料
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/gmail/authorize:
+    get:
+      tags: [auth]
+      summary: 发起单独的 Gmail 邮箱授权（增量授权读/写邮件权限，302 跳转）
+      operationId: gmailAuthorize
+      responses:
+        '302':
+          description: 重定向到 Google Gmail 授权页
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workbench:
+    get:
+      tags: [workbench]
+      summary: 工作台数据（KOL 列表 + 侧栏统计）
+      operationId: getWorkbench
+      parameters:
+        - name: view
+          in: query
+          required: false
+          description: 视图模式：我的 / 团队池 / 全部
+          schema:
+            $ref: '#/components/schemas/ViewMode'
+        - name: stage
+          in: query
+          required: false
+          description: 阶段筛选，阶段枚举或扩展筛选（unread / unreplied）或 all
+          schema:
+            type: string
+            example: all
+        - name: q
+          in: query
+          required: false
+          description: 搜索关键词（达人名 / 邮箱 / 主题）
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: 页码，从 1 开始
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: size
+          in: query
+          required: false
+          description: 每页条数
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: 工作台数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkbenchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/kols/{kolId}:
+    parameters:
+      - $ref: '#/components/parameters/KolId'
+    get:
+      tags: [kol]
+      summary: KOL 详情 + 邮件时间线
+      operationId: getKolDetail
+      responses:
+        '200':
+          description: KOL 详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KolDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [kol]
+      summary: 编辑 KOL（改名 / 校准阶段 / 标记无需回复）
+      operationId: updateKol
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KolUpdateRequest'
+      responses:
+        '200':
+          description: 更新后的 KOL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kol'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/kols/assign:
+    post:
+      tags: [kol]
+      summary: 'Leader：分配离职遗留（orphaned）达人给指定成员'
+      operationId: assignKols
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KolAssignRequest'
+      responses:
+        '200':
+          description: 分配结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignedCount:
+                    type: integer
+                    description: 实际被分配的达人数量
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/emails/{emailId}:
+    parameters:
+      - $ref: '#/components/parameters/EmailId'
+    patch:
+      tags: [email]
+      summary: 标记邮件已读 / 未读
+      operationId: updateEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailUpdateRequest'
+      responses:
+        '200':
+          description: 更新后的邮件
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [email]
+      summary: 删除邮件
+      operationId: deleteEmail
+      responses:
+        '204':
+          description: 已删除
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/emails/{emailId}/reclassify:
+    parameters:
+      - $ref: '#/components/parameters/EmailId'
+    post:
+      tags: [email]
+      summary: 重新进行 AI 分类
+      operationId: reclassifyEmail
+      responses:
+        '200':
+          description: 重新分类后的邮件
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/board:
+    get:
+      tags: [board]
+      summary: 看板（KPI + 累计漏斗 + 阶段分布）
+      operationId: getBoard
+      parameters:
+        - name: window
+          in: query
+          required: false
+          description: 时间窗：all / week / month / last30 / 指定月份 yyyy-MM
+          schema:
+            type: string
+            default: all
+            example: all
+      responses:
+        '200':
+          description: 看板汇总
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/team/members:
+    get:
+      tags: [team]
+      summary: 团队成员列表 + 团队池
+      operationId: getTeamMembers
+      responses:
+        '200':
+          description: 团队成员
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMembersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/team/profile:
+    patch:
+      tags: [team]
+      summary: 编辑个人资料（角色 / mentor / 飞书运营名）
+      operationId: updateTeamProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamProfileUpdateRequest'
+      responses:
+        '200':
+          description: 更新后的资料
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/team/depart/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        description: 目标成员 ID
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [team]
+      summary: 'Leader：标记成员离职（名下达人转为 orphaned）'
+      operationId: departTeamMember
+      responses:
+        '200':
+          description: 离职处理结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orphanedCount:
+                    type: integer
+                    description: 被置为 orphaned 的达人数量
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/templates:
+    get:
+      tags: [template]
+      summary: 我的模板列表
+      operationId: listTemplates
+      responses:
+        '200':
+          description: 模板列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmailTemplate'
+                  page:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [template]
+      summary: 新建模板
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpsertRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/templates/{id}:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    patch:
+      tags: [template]
+      summary: 编辑模板
+      operationId: updateTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpsertRequest'
+      responses:
+        '200':
+          description: 更新后的模板
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [template]
+      summary: 删除模板
+      operationId: deleteTemplate
+      responses:
+        '204':
+          description: 已删除
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/scheduled-emails:
+    get:
+      tags: [scheduled]
+      summary: 定时邮件列表
+      operationId: listScheduledEmails
+      responses:
+        '200':
+          description: 定时邮件列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScheduledEmail'
+                  page:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [scheduled]
+      summary: 创建排程
+      operationId: createScheduledEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduledEmailCreateRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledEmail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/scheduled-emails/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ScheduledEmailId'
+    delete:
+      tags: [scheduled]
+      summary: 取消定时邮件（仅未发送可取消）
+      operationId: cancelScheduledEmail
+      responses:
+        '204':
+          description: 已取消
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 已发送或正在发送，无法取消
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/sync/gmail:
+    post:
+      tags: [sync]
+      summary: 触发 Gmail 同步（增量 / 历史，支持 pageToken）
+      operationId: triggerGmailSync
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GmailSyncRequest'
+      responses:
+        '202':
+          description: 同步任务已受理
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GmailSyncStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/sync/gmail/status:
+    get:
+      tags: [sync]
+      summary: Gmail 同步进度
+      operationId: getGmailSyncStatus
+      responses:
+        '200':
+          description: 同步进度
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GmailSyncStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/sync/feishu:
+    post:
+      tags: [sync]
+      summary: 触发飞书同步（只读拉取 Sheet → kols）
+      operationId: triggerFeishuSync
+      responses:
+        '202':
+          description: 同步任务已受理
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeishuSyncStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/gmail/send:
+    post:
+      tags: [gmail]
+      summary: 单发邮件（已人工审核后发送）
+      operationId: sendEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailRequest'
+      responses:
+        '200':
+          description: 发送结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendEmailResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/gmail/batch-send:
+    post:
+      tags: [gmail]
+      summary: 批量跟进发送
+      operationId: batchSendEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchSendRequest'
+      responses:
+        '200':
+          description: 批量发送结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchSendResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ai/classify:
+    post:
+      tags: [ai]
+      summary: AI 邮件分类
+      operationId: aiClassify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiClassifyRequest'
+      responses:
+        '200':
+          description: 分类结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/AiClassifyResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ai/draft:
+    post:
+      tags: [ai]
+      summary: AI 草稿生成（中英双版）
+      operationId: aiDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiDraftRequest'
+      responses:
+        '200':
+          description: 草稿结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/AiDraftResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ai/check:
+    post:
+      tags: [ai]
+      summary: AI 草稿发送前自检
+      operationId: aiCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiCheckRequest'
+      responses:
+        '200':
+          description: 自检结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/AiCheckResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ai/translate:
+    post:
+      tags: [ai]
+      summary: 中英互译
+      operationId: aiTranslate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiTranslateRequest'
+      responses:
+        '200':
+          description: 翻译结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/AiTranslateResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
 components:
-  schemas: {}
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: MAILDESK_SESSION
+      description: 后端登录后下发的 HttpOnly 会话 Cookie
+
+  parameters:
+    KolId:
+      name: kolId
+      in: path
+      required: true
+      description: KOL ID
+      schema:
+        type: string
+        format: uuid
+    EmailId:
+      name: emailId
+      in: path
+      required: true
+      description: 邮件 ID
+      schema:
+        type: string
+        format: uuid
+    TemplateId:
+      name: id
+      in: path
+      required: true
+      description: 模板 ID
+      schema:
+        type: string
+        format: uuid
+    ScheduledEmailId:
+      name: id
+      in: path
+      required: true
+      description: 定时邮件 ID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: 请求参数有误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: 未登录或会话失效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: 无权限
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    # ---------- 枚举 ----------
+    KolStage:
+      type: string
+      description: KOL 阶段
+      enum:
+        - outreach
+        - replied
+        - negotiating
+        - confirmed
+        - producing
+        - reviewing
+        - published
+        - paying
+        - reinvest
+        - declined
+    KolStatus:
+      type: string
+      description: KOL 归属状态
+      enum:
+        - active
+        - unassigned
+        - orphaned
+        - closed
+    Platform:
+      type: string
+      description: 主平台
+      enum:
+        - tiktok
+        - instagram
+        - youtube
+        - x
+        - other
+    EmailDirection:
+      type: string
+      description: 邮件方向
+      enum:
+        - inbound
+        - outbound
+    AiPriority:
+      type: string
+      description: AI 判定的优先级
+      enum:
+        - high
+        - medium
+        - low
+    KolSource:
+      type: string
+      description: KOL 来源
+      enum:
+        - gmail
+        - feishu
+        - manual
+    ViewMode:
+      type: string
+      description: 工作台视图模式
+      enum:
+        - mine
+        - pool
+        - all
+      default: mine
+    UserRole:
+      type: string
+      description: 团队角色
+      enum:
+        - leader
+        - full_time
+        - intern
+    UserStatus:
+      type: string
+      description: 用户账号状态
+      enum:
+        - pending_approval
+        - active
+        - departed
+
+    # ---------- 通用 ----------
+    ApiError:
+      type: object
+      description: 统一错误体
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: 机器可读的错误码
+          example: BAD_REQUEST
+        message:
+          type: string
+          description: 用户可见的中文错误信息
+          example: 请求参数不完整
+        details:
+          type: object
+          additionalProperties: true
+          description: 可选的字段级错误详情
+    PageMeta:
+      type: object
+      description: 分页元信息
+      required: [page, size, total]
+      properties:
+        page:
+          type: integer
+          description: 当前页码（从 1 开始）
+          example: 1
+        size:
+          type: integer
+          description: 每页条数
+          example: 50
+        total:
+          type: integer
+          format: int64
+          description: 总记录数
+          example: 0
+
+    # ---------- 领域对象 ----------
+    Kol:
+      type: object
+      description: KOL（达人）
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          description: 联系邮箱
+        name:
+          type: string
+          nullable: true
+          description: 达人名
+        handle:
+          type: string
+          nullable: true
+          description: 账号 handle
+        primaryPlatform:
+          allOf:
+            - $ref: '#/components/schemas/Platform'
+          nullable: true
+        type:
+          type: string
+          nullable: true
+          description: 频道类型
+        externalProfileUrl:
+          type: string
+          nullable: true
+          description: 主页链接
+        source:
+          $ref: '#/components/schemas/KolSource'
+        feishuRecordId:
+          type: string
+          nullable: true
+          description: 飞书记录 ID
+        feishuOutreachAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 飞书建联时间
+        stage:
+          $ref: '#/components/schemas/KolStage'
+        status:
+          $ref: '#/components/schemas/KolStatus'
+        ownerUserId:
+          type: string
+          format: uuid
+          nullable: true
+          description: 归属成员 ID
+        lastInboundAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 最近一封来信时间
+        lastOutboundAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 最近一封去信时间
+        agreedPrice:
+          type: number
+          nullable: true
+          description: 约定价格
+        agreedDeadline:
+          type: string
+          format: date
+          nullable: true
+          description: 约定截稿日期
+        notes:
+          type: string
+          nullable: true
+          description: 备注
+        replyResolved:
+          type: boolean
+          description: 手动「无需回复」覆盖标记
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    KolDetail:
+      type: object
+      description: KOL 详情（含邮件时间线）
+      properties:
+        kol:
+          $ref: '#/components/schemas/Kol'
+        ownerName:
+          type: string
+          nullable: true
+          description: 归属成员显示名
+        emails:
+          type: array
+          description: 邮件时间线（按时间排序）
+          items:
+            $ref: '#/components/schemas/Email'
+    Email:
+      type: object
+      description: 邮件
+      properties:
+        id:
+          type: string
+          format: uuid
+        kolId:
+          type: string
+          format: uuid
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        direction:
+          $ref: '#/components/schemas/EmailDirection'
+        fromEmail:
+          type: string
+        toEmails:
+          type: array
+          items:
+            type: string
+        ccEmails:
+          type: array
+          nullable: true
+          items:
+            type: string
+        subject:
+          type: string
+          nullable: true
+        bodyText:
+          type: string
+          nullable: true
+        bodyHtml:
+          type: string
+          nullable: true
+        bodyZh:
+          type: string
+          nullable: true
+          description: 中文译文
+        hasAttachments:
+          type: boolean
+        attachmentNames:
+          type: array
+          items:
+            type: string
+        sentAt:
+          type: string
+          format: date-time
+        aiStageSignal:
+          allOf:
+            - $ref: '#/components/schemas/KolStage'
+          nullable: true
+          description: AI 推断的阶段信号
+        aiPriority:
+          allOf:
+            - $ref: '#/components/schemas/AiPriority'
+          nullable: true
+        aiSummary:
+          type: string
+          nullable: true
+        aiSuggestedAction:
+          type: string
+          nullable: true
+        isRead:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    EmailTemplate:
+      type: object
+      description: 邮件模板
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: 模板名
+        scenario:
+          type: string
+          nullable: true
+          description: 使用场景
+        subject:
+          type: string
+          description: 主题
+        body:
+          type: string
+          description: 正文
+        usedCount:
+          type: integer
+          description: 使用次数
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ScheduledEmail:
+      type: object
+      description: 定时邮件
+      properties:
+        id:
+          type: string
+          format: uuid
+        kolId:
+          type: string
+          format: uuid
+        kolName:
+          type: string
+          nullable: true
+          description: 关联达人名（冗余便于展示）
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+        toEmail:
+          type: string
+        ccEmails:
+          type: array
+          items:
+            type: string
+        subject:
+          type: string
+        englishBody:
+          type: string
+        englishBodyHtml:
+          type: string
+          nullable: true
+        chineseDraft:
+          type: string
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          description: 状态机
+          enum:
+            - scheduled
+            - processing
+            - sent
+            - failed
+        attemptCount:
+          type: integer
+        lastError:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    Profile:
+      type: object
+      description: 用户资料
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        mentorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        feishuOperatorName:
+          type: string
+          nullable: true
+          description: 飞书运营名（用于批量归属）
+        gmailAuthorized:
+          type: boolean
+          description: 是否已完成 Gmail 邮箱授权
+        lastSyncedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    TeamMember:
+      allOf:
+        - $ref: '#/components/schemas/Profile'
+        - type: object
+          properties:
+            ownedKolCount:
+              type: integer
+              description: 名下达人数量
+    TeamMembersResponse:
+      type: object
+      description: 团队成员 + 团队池
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMember'
+        pool:
+          type: array
+          description: 团队池（待分配 / orphaned 达人）
+          items:
+            $ref: '#/components/schemas/Kol'
+
+    # ---------- 工作台 ----------
+    WorkbenchKol:
+      allOf:
+        - $ref: '#/components/schemas/Kol'
+        - type: object
+          properties:
+            ownerName:
+              type: string
+              nullable: true
+            latestEmail:
+              allOf:
+                - $ref: '#/components/schemas/Email'
+              nullable: true
+            unreadCount:
+              type: integer
+            unreplied:
+              type: boolean
+              description: 需我回复
+            awaitingReply:
+              type: boolean
+              description: 等待对方回复
+    WorkbenchSidebarStats:
+      type: object
+      description: 工作台侧栏统计
+      properties:
+        total:
+          type: integer
+          description: 当前视图达人总数
+        unread:
+          type: integer
+          description: 未读数
+        unreplied:
+          type: integer
+          description: 需我回复数
+        stageCounts:
+          type: object
+          description: 各阶段计数
+          additionalProperties:
+            type: integer
+    WorkbenchResponse:
+      type: object
+      description: 工作台数据（列表 + 侧栏统计 + 分页）
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkbenchKol'
+        sidebar:
+          $ref: '#/components/schemas/WorkbenchSidebarStats'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+
+    # ---------- 看板 ----------
+    BoardKpi:
+      type: object
+      description: 看板核心指标
+      properties:
+        totalKols:
+          type: integer
+          description: 达人总数
+        activeKols:
+          type: integer
+          description: 进行中达人数
+        publishedKols:
+          type: integer
+          description: 已发布数
+        paidKols:
+          type: integer
+          description: 已付款数
+        conversionRate:
+          type: number
+          format: float
+          description: 转化率（已付款 / 总数）
+    BoardFunnelStage:
+      type: object
+      description: 漏斗单阶段（累计：本阶段及以后人数）
+      properties:
+        stage:
+          $ref: '#/components/schemas/KolStage'
+        label:
+          type: string
+          description: 阶段中文名
+        count:
+          type: integer
+          description: 累计人数
+    BoardStageDistribution:
+      type: object
+      description: 阶段分布（当前正处于该阶段的人数）
+      properties:
+        stage:
+          $ref: '#/components/schemas/KolStage'
+        label:
+          type: string
+        count:
+          type: integer
+    BoardSummary:
+      type: object
+      description: 看板汇总（KPI + 累计漏斗 + 阶段分布）
+      properties:
+        window:
+          type: string
+          description: 当前时间窗
+          example: all
+        kpi:
+          $ref: '#/components/schemas/BoardKpi'
+        funnel:
+          type: array
+          description: 累计漏斗
+          items:
+            $ref: '#/components/schemas/BoardFunnelStage'
+        stageDistribution:
+          type: array
+          description: 阶段分布
+          items:
+            $ref: '#/components/schemas/BoardStageDistribution'
+
+    # ---------- 请求体 ----------
+    KolUpdateRequest:
+      type: object
+      description: KOL 编辑请求（按需传字段）
+      properties:
+        name:
+          type: string
+        stage:
+          $ref: '#/components/schemas/KolStage'
+        replyResolved:
+          type: boolean
+          description: 标记 / 取消「无需回复」
+        notes:
+          type: string
+        agreedPrice:
+          type: number
+          nullable: true
+        agreedDeadline:
+          type: string
+          format: date
+          nullable: true
+    KolAssignRequest:
+      type: object
+      required: [kolIds, ownerUserId]
+      properties:
+        kolIds:
+          type: array
+          description: 待分配的达人 ID 列表
+          items:
+            type: string
+            format: uuid
+        ownerUserId:
+          type: string
+          format: uuid
+          description: 目标归属成员 ID
+    EmailUpdateRequest:
+      type: object
+      required: [isRead]
+      properties:
+        isRead:
+          type: boolean
+          description: 标记已读 / 未读
+    TeamProfileUpdateRequest:
+      type: object
+      required: [displayName, role]
+      properties:
+        displayName:
+          type: string
+          description: 工作台显示名
+        role:
+          $ref: '#/components/schemas/UserRole'
+        mentorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        feishuOperatorName:
+          type: string
+          nullable: true
+          description: 飞书运营名（保存后批量归属未分配达人）
+    TemplateUpsertRequest:
+      type: object
+      required: [name, subject, body]
+      properties:
+        name:
+          type: string
+        scenario:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        body:
+          type: string
+    ScheduledEmailCreateRequest:
+      type: object
+      required: [kolId, to, subject, englishBody, scheduledAt]
+      properties:
+        kolId:
+          type: string
+          format: uuid
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+        to:
+          type: string
+          format: email
+        ccEmails:
+          type: array
+          items:
+            type: string
+            format: email
+        subject:
+          type: string
+        englishBody:
+          type: string
+        englishBodyHtml:
+          type: string
+          nullable: true
+        chineseDraft:
+          type: string
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+          description: 定时发送时间（必须晚于当前）
+
+    GmailSyncRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          description: 同步模式
+          enum:
+            - incremental
+            - history
+          default: incremental
+        pageToken:
+          type: string
+          nullable: true
+          description: 历史模式分页游标
+    GmailSyncStatus:
+      type: object
+      description: Gmail 同步状态
+      properties:
+        running:
+          type: boolean
+        mode:
+          type: string
+          enum:
+            - incremental
+            - history
+          nullable: true
+        processed:
+          type: integer
+          description: 已处理邮件数
+        nextPageToken:
+          type: string
+          nullable: true
+        lastSyncedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastError:
+          type: string
+          nullable: true
+    FeishuSyncStatus:
+      type: object
+      description: 飞书同步状态
+      properties:
+        running:
+          type: boolean
+        upserted:
+          type: integer
+          description: upsert 的达人数量
+        lastSyncedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastError:
+          type: string
+          nullable: true
+
+    SendEmailRequest:
+      type: object
+      required: [kolId, to, subject, englishBody, reviewed]
+      properties:
+        kolId:
+          type: string
+          format: uuid
+        to:
+          type: string
+          format: email
+        ccEmails:
+          type: array
+          items:
+            type: string
+            format: email
+        subject:
+          type: string
+        englishBody:
+          type: string
+        englishBodyHtml:
+          type: string
+          nullable: true
+        chineseDraft:
+          type: string
+          nullable: true
+        templateId:
+          type: string
+          format: uuid
+          nullable: true
+        reviewed:
+          type: boolean
+          description: 已人工审核确认（必须为 true）
+    SendEmailResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - sent
+            - not_configured
+            - failed
+        messageId:
+          type: string
+          nullable: true
+          description: Gmail 返回的 messageId
+        message:
+          type: string
+          nullable: true
+    BatchSendRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          description: 批量发送项
+          items:
+            $ref: '#/components/schemas/SendEmailRequest'
+    BatchSendResult:
+      type: object
+      properties:
+        successCount:
+          type: integer
+        failedCount:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SendEmailResult'
+
+    # ---------- AI ----------
+    AiClassifyRequest:
+      type: object
+      required: [direction, body]
+      properties:
+        direction:
+          $ref: '#/components/schemas/EmailDirection'
+        subject:
+          type: string
+        body:
+          type: string
+        history:
+          type: string
+          nullable: true
+    AiClassifyResult:
+      type: object
+      properties:
+        stageSignal:
+          allOf:
+            - $ref: '#/components/schemas/KolStage'
+          nullable: true
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/AiPriority'
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        suggestedAction:
+          type: string
+          nullable: true
+        extractedFields:
+          type: object
+          additionalProperties: true
+        fallback:
+          type: boolean
+          description: 是否走了降级 heuristic
+    AiDraftRequest:
+      type: object
+      required: [kolName, latestEmail]
+      properties:
+        kolName:
+          type: string
+        senderName:
+          type: string
+          default: Chloe
+        latestEmail:
+          type: string
+        history:
+          type: string
+        templateHint:
+          type: string
+        kolStage:
+          type: string
+        kolPlatform:
+          type: string
+        kolAgreedPrice:
+          type: number
+          nullable: true
+    AiDraftResult:
+      type: object
+      properties:
+        englishDraft:
+          type: string
+          description: 英文草稿
+        chineseDraft:
+          type: string
+          description: 中文草稿
+        fallback:
+          type: boolean
+    AiCheckRequest:
+      type: object
+      required: [draft]
+      properties:
+        draft:
+          type: string
+          description: 待检查的草稿正文
+        subject:
+          type: string
+        context:
+          type: string
+          nullable: true
+    AiCheckResult:
+      type: object
+      properties:
+        issues:
+          type: array
+          description: 发现的问题列表
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum:
+                  - high
+                  - medium
+                  - low
+              message:
+                type: string
+        fallback:
+          type: boolean
+    AiTranslateRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        targetLang:
+          type: string
+          description: 目标语言
+          enum:
+            - zh
+            - en
+          default: zh
+    AiTranslateResult:
+      type: object
+      properties:
+        translated:
+          type: string
+          description: 译文
+        targetLang:
+          type: string
+          enum:
+            - zh
+            - en
+        fallback:
+          type: boolean
+
+security:
+  - sessionCookie: []

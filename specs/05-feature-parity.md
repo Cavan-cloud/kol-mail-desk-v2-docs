@@ -22,7 +22,7 @@
 
 - [ ] **Google OAuth 登录，授权 Gmail scope（读 + 发送）**
   - Phase: P1 | Ticket: P1-T04 | 后端: `maildesk-api/.../auth/GoogleOAuth2Controller.java`
-  - 前端: `app/login/page.tsx` + `lib/api-client/auth.ts` | E2E: `e2e/auth/login.spec.ts`
+  - 前端: P1-T15 ✅ `app/login/page.tsx` | E2E: P1-T17 ✅ `e2e/smoke/routes.spec.ts` @smoke（mock API）
   - 验收: scope 含 `gmail.readonly` + `gmail.send`；refresh_token AES 加密入 `integration_credentials`
 
 ### F-AUTH-02 同意页文案
@@ -41,7 +41,7 @@
 ### F-AUTH-04 首次登录资料完善
 
 - [ ] **首次登录跳入资料页：显示名、角色、mentor、飞书运营名**
-  - Phase: P1 | Ticket: P1-T05 | 后端: `ProfileController` + `profiles` 表
+  - Phase: P1 | Ticket: P1-T05（后端 ✅）+ P1-T15（前端 ✅ `/onboarding`）| 后端: `PATCH /api/v1/team/profile`
   - 前端: `app/profile/page.tsx` 或登录后引导弹窗 | E2E: `e2e/auth/first-login.spec.ts`
   - 验收: 必填校验生效；未填完不可访问工作台主功能
 
@@ -66,13 +66,13 @@
 ### F-WB-NAV-01 左侧导航 5 项
 
 - [ ] **导航：工作台 / 团队看板 / 团队成员 / 邮件模板 / 定时邮件**
-  - Phase: P1 | Ticket: P1-T13, P1-T15 | 前端: `components/AppSidebar.tsx`（旧仓库迁入）
+  - Phase: P1 | Ticket: P1-T13, P1-T15（前端 ✅）| 前端: `components/shell/AppNav.tsx` + 6 路由页
   - 验收: 5 个导航可点击，路由正确，未授权页面 redirect 到登录
 
 ### F-WB-SIDE-01 ~ 04 侧栏统计
 
 - [ ] **侧栏统计：需我回复 / 高优先级 / 团队池 / 总达人**
-  - Phase: P1 | Ticket: P1-T06 | 后端: `WorkbenchController.GET /api/v1/workbench/stats`
+  - Phase: P1 | Ticket: P1-T06（后端 ✅）+ P1-T15（前端 ✅）| 后端: `GET /api/v1/workbench` → `sidebarStats`
   - 前端: `components/WorkbenchSidebar.tsx`
   - 验收（各项口径）:
     - 需我回复：最新邮件 inbound + 未手动标记「无需回复」
@@ -89,8 +89,8 @@
   - 验收: macOS Cmd+K 也工作；ESC 关闭
 
 - [ ] **搜索匹配：达人名、邮箱、邮件主题、AI 摘要**
-  - Phase: P1（基础）/ P7（OpenSearch 升级）| Ticket: P1-T06 + P7-T06
-  - 后端: `GET /api/v1/search?q=...`，按 ILIKE 多列模糊；P7 换 OpenSearch
+  - Phase: P1（基础）/ P7（OpenSearch 升级）| Ticket: P1-T06（后端 ✅，workbench `q` 参数）+ P7-T06
+  - 后端: `GET /api/v1/workbench?q=...` ILIKE 多列；P7 换 OpenSearch
   - 验收: 200ms 内返回 ≤30 条匹配；高亮关键词
 
 ### F-WB-SYNC-01 同步 Gmail 按钮
@@ -125,7 +125,7 @@
 ### F-WB-LIST-01 三种范围
 
 - [ ] **范围：我的 / 团队池 / 全部**
-  - Phase: P1 | Ticket: P1-T06 | 后端: `GET /api/v1/workbench/kols?scope=mine|pool|all`
+  - Phase: P1 | Ticket: P1-T06（后端 ✅）+ P1-T15（前端 ✅）| 后端: `GET /api/v1/workbench?view=mine|pool|all`
   - 验收: 我的 = `owner_user_id = currentUser`；团队池 = `status IN ('unassigned','orphaned')`；全部 = 当前租户全量
 
 ### F-WB-LIST-02 每行字段
@@ -146,7 +146,7 @@
 ### F-WB-DETAIL-01 基础信息
 
 - [ ] **达人名、邮箱、来源、平台、类型、负责人、报价、主页链接、合作状态、备注**
-  - Phase: P1 | Ticket: P1-T06 | 前端: `components/KolDetailCard.tsx`
+  - Phase: P1 | Ticket: P1-T06（后端 ✅）+ P1-T15（前端 ✅）| 后端: `GET /api/v1/kols/{kolId}` | 前端: 工作台详情 pane
   - 验收: 字段对照 v3.3 §3.4 一一齐全；报价类型为 `BigDecimal`
 
 ### F-WB-DETAIL-02 改名
@@ -254,19 +254,19 @@
 ### F-BOARD-KPI 顶部 KPI（§5.1）
 
 - [ ] **总达人（当前时间窗内）**
-  - Phase: P1 | Ticket: P1-T07 | 后端: `GET /api/v1/board/kpi?window=...`
+  - Phase: P1 | Ticket: P1-T07（后端 ✅）| 后端: `GET /api/v1/board?window=...`
 - [ ] **待回复 / 停滞数**
-  - Phase: P1 | Ticket: P1-T07
+  - Phase: P1 | Ticket: P1-T07（后端 ✅）
 - [ ] **未读邮件（inbound + is_read=false，当前时间窗）**
-  - Phase: P1 | Ticket: P1-T07
+  - Phase: P1 | Ticket: P1-T07（后端 ✅）
 - [ ] **进入合作数 / 转化率（confirmed 及之后阶段达人数 + 比例）**
-  - Phase: P1 | Ticket: P1-T07
+  - Phase: P1 | Ticket: P1-T07（后端 ✅）
   - 验收: 4 项 KPI 数字与旧系统对账（允许 ±1 容差）
 
 ### F-BOARD-WINDOW 时间窗（§5.2）
 
 - [ ] **6 个时间窗：全部 / 本周 / 本月 / 最近 30 天 / 指定月份 yyyy-MM**
-  - Phase: P1 | Ticket: P1-T07 | 后端: 时间窗参数化
+  - Phase: P1 | Ticket: P1-T07（后端 ✅）| 后端: `BoardWindow` 解析 `window` 参数
 - [ ] **时间窗基于 `feishu_outreach_at`**
 - [ ] **无日期的达人只出现在「全部时间」**
   - 验收: 月份切换无数据时 UI 提示「该月无飞书登记记录」
@@ -274,7 +274,7 @@
 ### F-BOARD-PIPELINE 漏斗与阶段分布（§5.3）
 
 - [ ] **「累计漏斗」模式（本阶段及以后累计人数）**
-  - Phase: P1 | Ticket: P1-T07 | 后端: 单查 `COUNT(*) OVER ()` 实现
+  - Phase: P1 | Ticket: P1-T07（后端 ✅）| 后端: `StageCatalog` 累计计数
 - [ ] **「阶段分布」模式（当前正处于该阶段人数）**
 - [ ] **两种模式 UI 切换 + 副标题动态变化**
   - 前端: `components/PipelinePanel.tsx`
@@ -321,9 +321,9 @@
 ### F-TEAM-LIST 成员列表（§7.1）
 
 - [ ] **显示：姓名 / 邮箱 / 状态 / 角色 / mentor / 飞书运营名**
-  - Phase: P1 | Ticket: P1-T08
+  - Phase: P1 | Ticket: P1-T08（后端 ✅）| 后端: `GET /api/v1/team/members`
 - [ ] **关键指标：在跟达人数 / 已成交数 / 停滞风险**
-  - Phase: P1 | Ticket: P1-T08
+  - Phase: P1 | Ticket: P1-T08（后端 ✅）
   - 验收: 离职成员仍可见但标灰
 
 ### F-TEAM-OP 操作（§7.2）
@@ -348,7 +348,7 @@
 ### F-TPL-01 私有模板库
 
 - [ ] **模板库私有，每个成员只看自己**
-  - Phase: P1（GET）+ P5（CRUD）| Ticket: P1-T09, P5-T09
+  - Phase: P1（GET 后端 ✅）+ P5（CRUD）| Ticket: P1-T09, P5-T09 | 后端: `GET /api/v1/templates`
   - 验收: 跨用户 GET 不可见；尝试访问他人模板 403
 
 ### F-TPL-02 必填字段
@@ -391,7 +391,7 @@
 ### F-SCHED-02 列表字段
 
 - [ ] **列表显示：达人 / 计划发送时间 / 主题 / 状态 / 是否含 CC / 是否富文本**
-  - Phase: P1（GET）+ P6（状态机）| Ticket: P1-T10, P6-T01
+  - Phase: P1（GET 后端 ✅）+ P6（状态机）| Ticket: P1-T10, P6-T01 | 后端: `GET /api/v1/scheduled-emails`
   - 验收: 6 个字段齐全；状态符合 P6 状态机
 
 ### F-SCHED-03 5 个状态

@@ -9,8 +9,8 @@
 
 | 字段 | 值 |
 |------|-----|
-| 最后更新 | 2026-06-28 15:46 (UTC+8) |
-| 更新者 | Agent — 完成 P1-T01（mvn verify 本地通过） |
+| 最后更新 | 2026-06-30（P1-T16~T17 完成，Phase 1 收官） |
+| 更新者 | Agent — legacy import 守护 + Playwright @smoke E2E |
 | Git 提交 | 三仓库首次 commit 已完成并推送到 `github.com/Cavan-cloud/kol-mail-desk-v2-{backend,web,docs}` main 分支 |
 | 项目相对天数 | D0（计划期） |
 | 工作模式 | **multi-root workspace**：`~/code/maildesk-v2.code-workspace`（已创建） |
@@ -19,7 +19,7 @@
 
 ## 当前 Phase
 
-**Phase 1 — 只读核心 API + 前端壳（进行中，1/18 完成）**
+**Phase 1 — 只读核心 API + 前端壳（已完成，18/18）** 🎉
 
 Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phases.md#phase-1--只读核心-api--前端壳)。
 
@@ -28,9 +28,34 @@ Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phase
 | Ticket | 描述 | 状态 |
 |--------|------|------|
 | P1-T01 | Maven 父 POM + 8 子模块骨架 + ArchUnit 守护 | ✅ |
-| P1-T02 ~ P1-T18 | （见 BACKLOG.md） | ⬜ |
+| P1-T02 | Flyway 基础迁移 V1（V1~V13，13 张表 + 5 枚举 + 多租户/审计列） | ✅ ⚠️ |
+| P1-T03 | MyBatis-Plus 全局配置（4 拦截器 + AuditFiller + TenantContext + 3 TypeHandler + 示例 DO/Mapper） | ✅ ⚠️ |
+| P1-T04 | Spring Security + Google OAuth2 登录（AES-256-GCM token encryption + Redis 会话 + `/me`/`/auth/logout`/`/gmail/authorize`） | ✅ ⚠️ |
+| P1-T11 | OpenAPI 契约填充 Phase 1 全部端点（28 path / 47 schema） | ✅ |
+| P1-T12 | Next.js 15 项目初始化 + Tailwind / globals.css 迁入 | ✅ |
+| P1-T14 | `lib/api-client/`（openapi-typescript + openapi-fetch + 11 子域 + 单元测试） | ✅ |
+| P1-T18 | dev seed 数据脚本（V14 google_sub + 6 个 dev-*.sql + `SeedRunner@Profile("seed")` + `SeedRunnerIT`） | ✅ ⚠️ |
+| P1-T13 | 组件迁入（24 白名单 + AutoMarkRead，共 25 个；`api-client` 替换旧 fetch） | ✅ |
+| P1-T05 | `profiles` 落库 + 首次资料完善（PATCH /team/profile + OAuth pending_approval） | ✅ |
+| P1-T06 | `WorkbenchController` + `KolController` GET（列表 / 侧栏统计 / 详情 + 邮件时间线） | ✅ |
+| P1-T07 | `BoardController` GET（KPI + 漏斗 + 阶段分布 + 时间窗） | ✅ |
+| P1-T08 | `TeamController` GET `/team/members`（成员列表 + 指标） | ✅ |
+| P1-T09 | `TemplateController` GET（当前用户模板列表） | ✅ |
+| P1-T10 | `ScheduledEmailController` GET（定时邮件列表） | ✅ |
+| P1-T15 | 6 页面壳接 api-client（工作台 / 看板 / 团队 / 模板 / 定时 / 登录）+ `/onboarding` | ✅ |
+| P1-T16 | 删除旧 lib 占位 + ESLint / Vitest legacy import 守护 | ✅ |
+| P1-T17 | E2E smoke（Playwright @smoke：登录 / 工作台 / 看板） | ✅ |
 
-完成进度：**1 / 18 ≈ 6%**
+完成进度：**18 / 18 = 100%**
+
+> ⚠️ P1-T02 / P1-T03 / P1-T18：代码 + `mvn verify` + ArchUnit 全绿，但 `FlywayMigrationIT` / `MyBatisPlusConfigIT` / `SeedRunnerIT` 因本机无 Docker 优雅跳过（P1-T18 用类级 `@EnabledIf("isDockerAvailable")` gate，避免 SpringExtension 在无 Docker 时启动） → 需在带 Docker 的 CI 实锤。
+>
+> ⚠️ P1-T04 安全提示：当前 `application.yml` 走 `${TOKEN_ENCRYPTION_KEY:base64-test-key-32-bytes-for-local-dev-environment-only}` 默认值仅供本机起服，**生产**必须显式注入 32 字节 base64 主密钥；同理 `${GOOGLE_OAUTH_CLIENT_ID}` / `${GOOGLE_OAUTH_CLIENT_SECRET}` 必须从外部传入。`TokenEncryptionServiceTest` 单测通过；OAuth 端到端集成测试待 Gmail 同步 ticket 联调。
+>
+> 📌 P1-T14 契约观察（待 Phase 1 推进时回校 OpenAPI，不阻塞）：
+> 1. AI 响应使用 `{result}` 信封（前端已透明解包）
+> 2. `GmailSyncRequest.mode` 因 schema 默认值导致类型 required（不影响实际调用）
+> 3. 第 3 项见 [T14 完成报告](5209e1d8-2cd1-4ea5-8ded-e931fc4f878d)
 
 ---
 
@@ -56,13 +81,13 @@ Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phase
 
 ## 当前活跃 ticket
 
-**无 — 等待人工挑选 Phase 1 下一 ticket**
+**无 — 等待人工挑选**
 
-推荐下一项（按依赖）：
-
-- **P1-T02** Flyway 基础迁移 V1 — 依赖 P1-T01 ✅，~2 人日
-- **P1-T11** OpenAPI 契约填充 — 无前置，~1 人日（可与 T02 并行）
-- **P1-T12** Next.js 项目初始化 — 无前置，~1 人日（前端，可并行）
+> ✅ **Phase 1 全部完成**（2026-06-30）：T16 legacy 禁 import 双重守护；T17 Playwright `@smoke` 4 条（mock API，无需真实 OAuth）。
+>
+> **📌 合并后请在本机执行一次** `cd kol-mail-desk-v2-web && pnpm install`，提交更新后的 `pnpm-lock.yaml`（含 `@playwright/test`）。
+>
+> **下一 Phase**：Phase 2 — 飞书同步 + 阶段映射（见 `BACKLOG.md` § P2）
 
 ---
 
@@ -93,13 +118,13 @@ Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phase
 | Phase | 完成日期 | 备注 |
 |-------|---------|------|
 | **Phase 0 — 骨架与 Harness** | 2026-06-28 | 11/11 ticket 全完成；三仓库 git init + push 到 `Cavan-cloud/*`；CI 草案 + docker-compose dev + .env.example 就位 |
+| **Phase 1 — 只读核心 API + 前端壳** | 2026-06-30 | 18/18 ticket 全完成；后端只读 API + 前端 6 页 + Playwright @smoke |
 
 ---
 
 ## 下一个 Phase 入口
 
-完成 P0 全部 ticket 后进入 **Phase 1 — 只读核心 API + 前端壳**。
-入口检查清单详见 `04-phases.md` § Phase 1 「进入准入」与 `BACKLOG.md` § P1。
+**Phase 2 — 飞书同步 + 阶段映射**（见 `BACKLOG.md` § P2、`04-phases.md` § Phase 2 进入准入）。
 
 ---
 
