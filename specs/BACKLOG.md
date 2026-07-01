@@ -191,17 +191,57 @@
 
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
-| P2-T01 | `FeishuClient`（拉 Sheet / Bitable） | integration/feishu | 1.5d |
-| P2-T02 | 飞书字段映射 + 阶段映射（10 阶段 v3.3 §6） | application + common | 1d |
-| P2-T03 | `FeishuSyncService` upsert KOL（`(normalized_email, feishu_operator_name)` 复合唯一） | application | 1.5d |
-| P2-T04 | `feishu_operator_name` 保存后自动归属（无主才认领） | application | 1d |
-| P2-T05 | `POST /api/v1/sync/feishu` + 进度查询 + 前端按钮接入 | api + web | 1d |
-| P2-T06 | Worker `FeishuDeltaSyncJob` 每 30 分钟 + Redis 分布式锁 | worker | 1d |
-| P2-T07 | 飞书严格只读 ArchUnit 守护（禁止飞书写 API） | domain test | 0.5d |
-| P2-T08 | 飞书全量回填 CLI：`mvn -pl maildesk-worker spring-boot:run -Dspring.profiles.active=backfill` | worker | 1d |
-| P2-T09 | 阶段映射 SQL 验收脚本（生成 diff 报表） | docs/scripts | 0.5d |
+| P2-T01 | `FeishuClient`（拉 Sheet / Bitable） | integration/feishu | 1.5d | ✅ |
+| P2-T02 | 飞书字段映射 + 阶段映射（10 阶段 v3.3 §6） | application + common | 1d | ✅ |
+| P2-T03 | `FeishuSyncService` upsert KOL（`(normalized_email, feishu_operator_name)` 复合唯一） | application | 1.5d | ✅ |
+| P2-T04 | `feishu_operator_name` 保存后自动归属（无主才认领） | application | 1d | ✅ |
+| P2-T05 | `POST /api/v1/sync/feishu` + 进度查询 + 前端按钮接入 | api + web | 1d | ✅ |
+| P2-T06 | Worker `FeishuDeltaSyncJob` 每 30 分钟 + Redis 分布式锁 | worker | 1d | ✅ |
+| P2-T07 | 飞书严格只读 ArchUnit 守护（禁止飞书写 API） | domain test | 0.5d | ✅ |
+| P2-T08 | 飞书全量回填 CLI：`mvn -pl maildesk-worker spring-boot:run -Dspring.profiles.active=backfill` | worker | 1d | ✅ |
+| P2-T09 | 阶段映射 SQL 验收脚本（生成 diff 报表） | docs/scripts | 0.5d | ✅ |
 
 **Phase 2 合计：~9 人日**
+
+#### P2-T01 — `FeishuClient`（拉 Sheet / Bitable）✅
+
+> **完成（2026-06-30）**：`maildesk-domain` 新增 `FeishuClient` 端口 + `FeishuSheetMeta` / `FeishuBitableRecord` / `FeishuConfigCheckResult`；`maildesk-integration` 实现 `FeishuClientImpl`（RestTemplate + tenant token 内存缓存 + Sheet 400 行分批读取 + Bitable 100 条分页 + 3 次指数退避重试）；`FeishuProperties` + `FeishuAutoConfiguration`；`application.yml` / worker yml 增加 `maildesk.feishu.*`；7 项 `FeishuClientImplTest`（MockRestServiceServer）。HTTP 行为移植自 legacy `lib/feishu/sync-kols.ts`；字段/阶段映射留给 P2-T02。
+>
+> **端点（只读）**：`auth/v3/tenant_access_token/internal` · `sheets/v3/.../sheets/query` · `sheets/v2/.../values/{range}` · `bitable/v1/.../records`
+
+#### P2-T02 — 飞书字段映射 + 阶段映射 ✅
+
+> **完成（2026-07-01）**：`maildesk-common` 新增 `FeishuStageMapper`（v3.3 §6 完整对照，行政标记返回 null 保留现有阶段）+ `FeishuCellExtractor`（单元格文本/邮箱/URL/运营名/mergeKey）；`maildesk-application/sync/feishu` 新增 `FeishuFieldHeaders`（默认表头候选）· `FeishuColumnResolver` · `FeishuRowMapper` · `FeishuDateParser` · `FeishuPlatformNormalizer` · `FeishuKolDraft`。逻辑移植自 legacy `lib/feishu/sync-kols.ts`；`FeishuStageMapperTest` + `FeishuRowMapperTest` 等单测覆盖 §6 全表 + 行解析；`mvn -pl maildesk-application -am verify` BUILD SUCCESS。SQL 验收脚本留给 P2-T09。
+
+#### P2-T03 — `FeishuSyncService` upsert KOL ✅
+
+> **完成（2026-07-01）**：`FeishuSyncService` 编排只读 Sheet 拉取 + `FeishuSheetFilter` 近月 tab 过滤 + `mergeKey` 去重 + dryRun；`FeishuKolUpsertService` 按 `(email, feishu_operator_name)` 查找 upsert（200 行/chunk 独立事务），保护 `source=manual` 不被覆盖、stage null 不覆盖现有阶段、已有 owner 不被改写；同步时按 profile `feishu_operator_name` 匹配 owner。`FeishuClient` 新增 `configuredKolAppToken()`。9 项单测；`mvn -pl maildesk-application,maildesk-api -am verify` BUILD SUCCESS。HTTP 触发留给 P2-T05。
+
+#### P2-T04 — `feishu_operator_name` 保存后自动归属 ✅
+
+> **完成（2026-07-01）**：`TeamApplicationService.assignKolsByOperatorName`（`owner_user_id IS NULL` + 运营名归一化匹配）；`ProfileApplicationService.updateOwnProfile` 保存 profile 后自动调用；`PATCH /team/profile` 响应改为 `TeamProfileUpdateResponse { profile, kolsAssigned }`；OpenAPI 同步。F-AUTH-05 ✅（audit log 待 P5-T13）。
+
+#### P2-T05 — `POST /api/v1/sync/feishu` + 进度 + 前端按钮 ✅
+
+> **完成（2026-07-01）**：`SyncController`（`POST /api/v1/sync/feishu` → 202 · `GET /api/v1/sync/feishu/status`）；`FeishuSyncApplicationService` 内存进度 + 并发互斥；`FeishuSyncStatusDto`；工作台 `FeishuSyncButton` 接入 `headerActions`；`lib/api-client/sync.feishuStatus()` + `pnpm gen:api`。`mvn -pl maildesk-api -am verify` + `pnpm typecheck` 绿。
+
+#### P2-T06 — Worker `FeishuDeltaSyncJob` ✅
+
+> **完成（2026-07-01）**：`maildesk-infrastructure/redis/RedisDistributedLock`（SET NX + Lua 释放）；`maildesk-worker/feishu/FeishuDeltaSyncJob`（cron `0 */30 * * * *`、max-records 50、lock-ttl 25m、`TenantContext` 绑定默认租户）；`WorkerSchedulingConfig` + `WorkerProperties`；`FeishuSyncOptions.deltaBatch(int)`；worker `application.yml` 接 Redis + `TOKEN_ENCRYPTION_KEY`。P2-T08 将锁 key 统一为 `FeishuSyncLockKeys.SYNC`。`mvn -pl maildesk-worker -am verify` BUILD SUCCESS。
+
+#### P2-T08 — 飞书全量回填 CLI ✅
+
+> **完成（2026-07-01）**：`FeishuBackfillRunner`（`@Profile("backfill")` · `CommandLineRunner` · 跑完 `System.exit`）；`BackfillProperties` + `application-backfill.yml`（默认 `recent-months=0` 全 tab · 禁用 delta job）；`FeishuSyncOptions.backfill(recentMonths, dryRun)`；共享 `FeishuSyncLockKeys.SYNC` Redis 锁（TTL 60m）。用法：`mvn -pl maildesk-worker spring-boot:run -Dspring-boot.run.profiles=backfill`。
+
+#### P2-T09 — 阶段映射 SQL 验收脚本 ✅
+
+> **完成（2026-07-01）**：`kol-mail-desk-v2-docs/scripts/feishu-stage-mapping-audit.sql` — Part 1 fixture diff（SQL CASE 镜像 `FeishuStageMapper` · 期望 0 mismatch）；Part 2 飞书来源 KOL 阶段分布 + 9 阶段漏斗覆盖；Part 3 遗留 `replied` 异常行。用法：`psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/feishu-stage-mapping-audit.sql`。
+
+#### P2-T07 — 飞书严格只读 ArchUnit 守护 ✅
+
+> **完成（2026-06-30）**：`maildesk-api/src/test/.../FeishuReadOnlyArchitectureTest`（ArchUnit：禁 `com.lark.oapi`/`com.larksuite` SDK；`application`/`api`/`worker` 禁直接依赖 `integration.feishu` 实现类）；`maildesk-integration` 新增 `FeishuWriteApiGuard` + `FeishuReadOnlySourceTest`（扫描 `integration/feishu` 源码，禁写 HTTP 方法与 batch 写 API 路径，POST 白名单仅 `tenant_access_token/internal`）。全仓 ArchUnit 放在 api 模块测试以避免 domain↔integration Maven 循环依赖。
+>
+> **验收**：F-STAGE-04 ✅ · `mvn -pl maildesk-api,maildesk-integration -am verify` 绿
 
 ---
 

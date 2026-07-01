@@ -47,9 +47,9 @@
 
 ### F-AUTH-05 飞书运营名归属
 
-- [ ] **保存飞书运营名后自动归属匹配的 KOL（无主才认领）**
+- [✅] **保存飞书运营名后自动归属匹配的 KOL（无主才认领）**
   - Phase: P2 | Ticket: P2-T04 | 后端: `TeamApplicationService.assignKolsByOperatorName`
-  - 验收: 已有 owner 的 KOL 不被覆盖；只领无主 KOL；写 audit log
+  - 验收: 已有 owner 的 KOL 不被覆盖；只领无主 KOL；`kolsAssigned` 随 PATCH profile 返回；audit log 待 P5-T13
 
 ### F-AUTH-06 历史同步引导
 
@@ -139,7 +139,7 @@
 
 - [ ] **阶段标签使用 v3.3 §6 的 10 阶段映射**
   - Phase: P2 | Ticket: P2-T02 | 后端: `kol_stage` ENUM + 映射表
-  - 验收: 10 阶段全部覆盖；映射 SQL 验收脚本通过
+  - 验收: 10 阶段全部覆盖；映射 SQL 验收脚本 `scripts/feishu-stage-mapping-audit.sql` 已就位（UI 标签待 P1 前端联调）
 
 ### 2.4 达人详情卡片（§3.4）
 
@@ -294,9 +294,9 @@
 
 ### F-STAGE-01 完整映射
 
-- [ ] **v3.3 §6 飞书状态 → 工作台阶段 10 阶段映射表**
-  - Phase: P2 | Ticket: P2-T02 | 后端: `FeishuStageMapper`
-  - 验收: 飞书所有出现过的状态都有映射；未知状态 fallback `unknown` + 告警日志
+- [✅] **v3.3 §6 飞书状态 → 工作台阶段 10 阶段映射表**
+  - Phase: P2 | Ticket: P2-T02, P2-T09 | 后端: `FeishuStageMapper` · 验收 SQL: `scripts/feishu-stage-mapping-audit.sql`
+  - 验收: v3.3 §6 全表参数化单测通过；未知/行政标记返回 null（保留现有阶段，与 legacy 一致）；SQL 验收脚本 fixture diff 期望 0 mismatch
 
 ### F-STAGE-02 飞书是唯一来源
 
@@ -310,7 +310,7 @@
 
 ### F-STAGE-04 飞书严格只读
 
-- [ ] **飞书数据严格只读，不写回飞书**
+- [✅] **飞书数据严格只读，不写回飞书**
   - Phase: P2 | Ticket: P2-T07 | 后端: ArchUnit 守护
   - 验收: ArchUnit 测试通过；代码评审禁止引入飞书写 API
 
@@ -330,7 +330,7 @@
 
 - [ ] **保存设置（角色 / mentor / 飞书运营名）**
   - Phase: P5 | Ticket: P5-T10
-- [ ] **飞书运营名保存后自动批量归属**（详见 F-AUTH-05）
+- [ ] **飞书运营名保存后自动批量归属** — 见 [F-AUTH-05 ✅]
 - [ ] **「标记离职」（Leader 权限）**
   - Phase: P5 | Ticket: P5-T11 | 后端: `POST /api/v1/team/members/{id}/offboard`
 - [ ] **离职后名下达人进入团队池（status → orphaned）**

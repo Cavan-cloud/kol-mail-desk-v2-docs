@@ -9,8 +9,8 @@
 
 | 字段 | 值 |
 |------|-----|
-| 最后更新 | 2026-06-30（P1-T16~T17 完成，Phase 1 收官） |
-| 更新者 | Agent — legacy import 守护 + Playwright @smoke E2E |
+| 最后更新 | 2026-07-01（Phase 2 完成） |
+| 更新者 | Agent — Phase 2 飞书同步（P2-T01~T09） |
 | Git 提交 | 三仓库首次 commit 已完成并推送到 `github.com/Cavan-cloud/kol-mail-desk-v2-{backend,web,docs}` main 分支 |
 | 项目相对天数 | D0（计划期） |
 | 工作模式 | **multi-root workspace**：`~/code/maildesk-v2.code-workspace`（已创建） |
@@ -19,9 +19,25 @@
 
 ## 当前 Phase
 
-**Phase 1 — 只读核心 API + 前端壳（已完成，18/18）** 🎉
+**Phase 2 — 飞书同步 + 阶段映射（9/9）✅**
 
-Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phases.md#phase-1--只读核心-api--前端壳)。
+Phase 0、Phase 1 已完成。详见 [`04-phases.md` § Phase 2](./04-phases.md#phase-2--飞书同步) · [`BACKLOG.md` § P2](./BACKLOG.md#phase-2--飞书同步2-3-周)。
+
+### Phase 2 完成度
+
+| Ticket | 描述 | 状态 |
+|--------|------|------|
+| P2-T01 | `FeishuClient`（拉 Sheet / Bitable） | ✅ |
+| P2-T02 | 飞书字段映射 + 阶段映射（10 阶段 v3.3 §6） | ✅ |
+| P2-T03 | `FeishuSyncService` upsert KOL | ✅ |
+| P2-T04 | `feishu_operator_name` 保存后自动归属 | ✅ |
+| P2-T05 | `POST /api/v1/sync/feishu` + 进度 + 前端按钮 | ✅ |
+| P2-T06 | Worker `FeishuDeltaSyncJob` | ✅ |
+| P2-T07 | 飞书严格只读 ArchUnit 守护 | ✅ |
+| P2-T08 | 飞书全量回填 CLI | ✅ |
+| P2-T09 | 阶段映射 SQL 验收脚本 | ✅ |
+
+完成进度：**9 / 9 = 100%** 🎉
 
 ### Phase 1 完成度
 
@@ -83,11 +99,9 @@ Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phase
 
 **无 — 等待人工挑选**
 
-> ✅ **Phase 1 全部完成**（2026-06-30）：T16 legacy 禁 import 双重守护；T17 Playwright `@smoke` 4 条（mock API，无需真实 OAuth）。
+> ✅ **Phase 2 全部完成**（2026-07-01）：P2-T08 `FeishuBackfillRunner`（`spring.profiles.active=backfill`）+ P2-T09 `scripts/feishu-stage-mapping-audit.sql`。
 >
-> **📌 合并后请在本机执行一次** `cd kol-mail-desk-v2-web && pnpm install`，提交更新后的 `pnpm-lock.yaml`（含 `@playwright/test`）。
->
-> **下一 Phase**：Phase 2 — 飞书同步 + 阶段映射（见 `BACKLOG.md` § P2）
+> **推荐下一 Phase**：Phase 3 — Gmail 同步（从 P3-T01 或 P3-T02 起）。
 
 ---
 
@@ -119,12 +133,13 @@ Phase 0 已于 2026-06-28 完成。详见 [`04-phases.md` § Phase 1](./04-phase
 |-------|---------|------|
 | **Phase 0 — 骨架与 Harness** | 2026-06-28 | 11/11 ticket 全完成；三仓库 git init + push 到 `Cavan-cloud/*`；CI 草案 + docker-compose dev + .env.example 就位 |
 | **Phase 1 — 只读核心 API + 前端壳** | 2026-06-30 | 18/18 ticket 全完成；后端只读 API + 前端 6 页 + Playwright @smoke |
+| **Phase 2 — 飞书同步 + 阶段映射** | 2026-07-01 | 9/9 ticket 全完成；FeishuClient + 同步 API + Worker delta/backfill + ArchUnit 只读守护 + SQL 验收脚本 |
 
 ---
 
 ## 下一个 Phase 入口
 
-**Phase 2 — 飞书同步 + 阶段映射**（见 `BACKLOG.md` § P2、`04-phases.md` § Phase 2 进入准入）。
+**Phase 3 — Gmail 同步** — 推荐 **P3-T01**（`GmailClient`）或 **P3-T02**（`integration_credentials` 加密存取）。
 
 ---
 
