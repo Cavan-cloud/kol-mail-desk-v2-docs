@@ -157,11 +157,16 @@ FEISHU_APP_SECRET=
 FEISHU_KOL_APP_TOKEN=
 FEISHU_KOL_TABLE_ID=
 
-# ===== AI / Kimi =====
-KIMI_API_KEY=
-KIMI_BASE_URL=https://api.moonshot.cn/v1
-KIMI_MODEL_SMALL=moonshot-v1-8k
-KIMI_MODEL_LARGE=moonshot-v1-128k
+# ===== AI（多供应商：Moonshot/Kimi + DeepSeek，OpenAI 兼容协议，见 ADR-007）=====
+AI_DEFAULT_PROVIDER=moonshot
+# ---- Moonshot / Kimi ----
+MOONSHOT_API_KEY=
+MOONSHOT_BASE_URL=https://api.moonshot.cn
+# ---- DeepSeek ----
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+# 切换默认供应商：改 AI_DEFAULT_PROVIDER 为 deepseek 并填好 DEEPSEEK_API_KEY 即可，不用改代码
+# 各能力（classify/draft/check/translate）到具体模型 ID 的映射在 application.yml 的 maildesk.ai.* 配置里，非敏感信息不放 .env
 
 # ===== 加密（AES-256 主密钥，base64 编码 32 字节） =====
 TOKEN_ENCRYPTION_KEY=

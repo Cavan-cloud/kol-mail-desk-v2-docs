@@ -53,6 +53,7 @@
 - 单元：用录制 fixture（JSON）
 - 集成：测试账户 + 测试租户，每周自动跑一次
 - 不在 PR 必跑里加（避免 quota 消耗）
+- **Gmail 发信冒烟（P5-T20）**：`maildesk-integration` 模块 `GmailSendSmokeTest`，需 `GMAIL_SMOKE_ACCESS_TOKEN` + `GMAIL_SMOKE_TO`；运行手册见 [`scripts/gmail-send-smoke.md`](./scripts/gmail-send-smoke.md)
 
 **Mock Server：** WireMock 或自建 `FakeGmailClient`。
 
@@ -172,6 +173,8 @@ jobs:
 | 各 KOL 最新邮件 ID | LEFT JOIN diff | 0 |
 
 容差超出 → 暂停切流，定位差异。
+
+自动化 drill 脚本：[`scripts/cutover/dual-run-drill.sh`](../scripts/cutover/dual-run-drill.sh)（含 feature-parity 与 diff 门禁）。切流步骤见 [`scripts/cutover/cutover-runbook.md`](../scripts/cutover/cutover-runbook.md)。
 
 ## 八、安全与合规测试
 

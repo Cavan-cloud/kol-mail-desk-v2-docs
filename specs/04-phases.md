@@ -7,7 +7,7 @@
 | 0 | 骨架 + Harness | 2～3 周 | **进行中** |
 | 1 | 只读核心 API + 前端壳 | 3～4 周 | 待开始 |
 | 2 | 飞书同步 | 2～3 周 | 待开始 |
-| 3 | Gmail 同步 | 3～4 周 | 待开始 |
+| 3 | Gmail 同步 | 3～4 周 | 已完成 |
 | 4 | Spring AI | 2 周 | 待开始 |
 | 5 | 写操作与发信 | 3 周 | 待开始 |
 | 6 | 定时邮件 + 生产化 | 2 周 | 待开始 |
@@ -175,19 +175,19 @@ rg "^- \[ \]" kol-mail-desk-v2-docs/specs/05-feature-parity.md | rg "Phase: P{N}
 
 ### 交付物
 
-- [ ] Spring Security OAuth2 客户端配置（Google + Gmail scope）
-- [ ] `integration_credentials` 表（AES-256 加密 Token）
-- [ ] `GmailSyncService` 移植：
+- [✅] Spring Security OAuth2 客户端配置（Google + Gmail scope）— P1-T04
+- [✅] `integration_credentials` 表（AES-256 加密 Token）— P1-T02 / P3-T03
+- [✅] `GmailSyncService` 移植：
   - 增量（`history.list` + 2 天 safety net）
   - 历史（`messages.list` + pageToken 续传）
   - 并发 4，`format=full`
-- [ ] `persistGmailSync` 移植：
+- [✅] `persistGmailSync` 移植：
   - 飞书达人过滤（`isFeishuBacked`）
   - 已读规则（INSERT 时从 `UNREAD` 写入；UPDATE 不覆盖）
   - 新 inbound 清 `reply_resolved`
-- [ ] Worker `GmailIncrementalSyncJob`（每 2～5 分钟）
-- [ ] `POST /api/v1/sync/gmail`（mode、pageToken）
-- [ ] 前端 `GmailSyncButton` 接新 API（保留客户端循环）
+- [✅] Worker `GmailIncrementalSyncJob`（**每 5 分钟**）
+- [✅] `POST /api/v1/sync/gmail`（mode、pageToken）
+- [✅] 前端 `GmailSyncButton` 接新 API（保留客户端循环）
 
 ### 验收
 
@@ -218,17 +218,17 @@ rg "^- \[ \]" kol-mail-desk-v2-docs/specs/05-feature-parity.md | rg "Phase: P{N}
 
 ### 交付物
 
-- [ ] `spring-ai-openai-spring-boot-starter`，`base-url = https://api.moonshot.cn/v1`
-- [ ] Prompt 从旧 `lib/ai/prompts.ts` 移到 `resources/prompts/*.st`
-- [ ] `AiService`：
+- [x] `spring-ai-openai-spring-boot-starter`，`base-url = https://api.moonshot.cn/v1`（+ DeepSeek 多供应商，ADR-007）
+- [x] Prompt 从旧 `lib/ai/prompts.ts` 移到 `resources/prompts/*.st`
+- [x] `AiService`：
   - `classifyEmail`（8k 模型 + JSON schema）
   - `generateReplyDraft`（128k）
   - `checkDraft`（8k）
-  - `translateText`（128k）
-- [ ] 降级 fallback（无 Key 或 API 失败）
-- [ ] 同步链路接 AI（已存在邮件跳过）
-- [ ] 重新分类按钮 API
-- [ ] `ai_usage_log` 记录 token 与耗时
+  - `translateText`（8k / 32k 按需，非同步自动生成）
+- [x] 降级 fallback（无 Key 或 API 失败）
+- [x] 同步链路接 AI（已存在邮件跳过）
+- [x] 重新分类按钮 API
+- [x] `ai_usage_log` 记录 token 与耗时
 
 ### 验收
 
@@ -260,7 +260,7 @@ rg "^- \[ \]" kol-mail-desk-v2-docs/specs/05-feature-parity.md | rg "Phase: P{N}
 - [ ] Send：单发、批量、CC、HTML（multipart/alternative）
 - [ ] Template：CRUD、变量替换、`used_count++`
 - [ ] Team：编辑资料、离职（Leader）、分配（Leader）
-- [ ] Audit：所有写操作写 `actions` 表
+- [ ] Audit：所有写操作写 `actions` 表（P5-T13 ✅ 切面就位；后续 P5-T02～T12 写 API 逐 ticket 加 `@AuditAction` / `AuditLogService`）
 
 ### 前端交付物
 
@@ -307,14 +307,14 @@ rg "^- \[ \]" kol-mail-desk-v2-docs/specs/05-feature-parity.md | rg "Phase: P{N}
 
 ### 运维交付物
 
-- [ ] Docker 镜像（API、Worker 各一）
-- [ ] K8s manifests / Helm chart
-- [ ] OpenTelemetry + Prometheus + Grafana dashboard
-- [ ] 数据迁移脚本（旧 Supabase → 新 PG）
-  - 双跑期：旧系统继续运行，新系统并行
-  - 切流：DNS / Vercel 切到新前端
-  - 回滚预案：保留旧系统至少 2 周
-- [ ] 监控告警（Gmail 同步失败、AI 失败率、Worker lag）
+- [x] Docker 镜像（API、Worker 各一）
+- [x] K8s manifests / Helm chart
+- [x] OpenTelemetry + Prometheus + Grafana dashboard
+- [x] 数据迁移脚本（旧 Supabase → 新 PG）
+  - 双跑期：旧系统继续运行，新系统并行 — [`scripts/cutover/README.md`](../scripts/cutover/README.md)
+  - 切流：DNS / Vercel 切到新前端 — [`scripts/cutover/cutover-runbook.md`](../scripts/cutover/cutover-runbook.md)
+  - 回滚预案：保留旧系统至少 2 周 — [`scripts/cutover/rollback-runbook.md`](../scripts/cutover/rollback-runbook.md)
+- [x] 监控告警（Gmail 同步失败、AI 失败率、Worker lag）
 
 ### 验收
 

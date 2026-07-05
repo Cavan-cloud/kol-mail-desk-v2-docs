@@ -183,6 +183,11 @@
   - 登录成功后写 HttpOnly cookie（`SESSION`），有效期 7 天，sliding 续期
   - 单元 + 集成测试（mock OAuth Authorization Server）
 
+> **🐛 真实浏览器联调发现并修复（2026-07-04）**：本地首次用真实 Google 账号端到端登录时复现"登录成功后又跳回登录页，重试多次都进不去"。
+> 根因：Spring Security 默认把 `oauth2Login` 成功后的 `OAuth2AuthenticationToken` 持久化进 `JSESSIONID` 对应的 HttpSession；此后每个请求 `SecurityContextHolderFilter` 会先从该 HttpSession 恢复这个"陈旧" Google 身份，抢在 `SessionCookieAuthenticationFilter`（只在 `getAuthentication() == null` 时才生效）之前占位，导致基于 Redis 的 `MAILDESK_SESSION` 会话被跳过 → 请求判定未登录 → 401 → 前端弹回 `/login`；且每次重新登录都会往同一个 JSESSIONID 会话里再种一次，永久死循环。
+> 修复：`SecurityConfig` 增加 `.securityContext(ctx -> ctx.securityContextRepository(new NullSecurityContextRepository()))`，禁止 Spring Security 读写 HttpSession 里的认证上下文（OAuth2 授权过程中的临时 state 走独立的 `AuthorizationRequestRepository`，不受影响）。修复后用真实浏览器 cookie 重放请求验证通过。
+> 遗留：`P1-T04` 之前标注的"OAuth 端到端集成测试待 Gmail 同步 ticket 联调"至此已用真实账号验证通过；建议后续补一个针对"JSESSIONID + MAILDESK_SESSION 共存"场景的回归测试，防止此问题复现。
+
 ---
 
 ## Phase 2 — 飞书同步（2～3 周）
@@ -251,16 +256,16 @@
 
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
-| P3-T01 | `GmailClient` 封装（messages.list / history.list / get full） | integration/gmail | 1.5d |
-| P3-T02 | `integration_credentials` 表 + AES-256 加密存取 | infrastructure | 1d |
-| P3-T03 | OAuth token 刷新 + 失效检测 | infrastructure | 1d |
-| P3-T04 | 「重新授权 Gmail」流程（前端 + 后端 redirect） | api + web | 1d |
-| P3-T05 | `GmailSyncService.incremental`（history.list + 2 天 safety net） | application | 2d |
-| P3-T06 | `GmailSyncService.history`（messages.list + pageToken 续传，并发 4） | application | 2d |
-| P3-T07 | `persistGmailSync`：飞书达人过滤 + 已读规则 + reply_resolved 清理 | application | 2d |
-| P3-T08 | `POST /api/v1/sync/gmail`（mode、pageToken）+ 前端 button | api + web | 1d |
-| P3-T09 | Worker `GmailIncrementalSyncJob` 每 2~5 分钟 | worker | 1d |
-| P3-T10 | Gmail 同步集成测试（录制 fixture，无需真实账号） | application test | 1.5d |
+| P3-T01 | `GmailClient` 封装（messages.list / history.list / get full） | integration/gmail | 1.5d | ✅ |
+| P3-T02 | `integration_credentials` 表 + AES-256 加密存取 | infrastructure | 1d | ✅ |
+| P3-T03 | OAuth token 刷新 + 失效检测 | application | 1d | ✅ |
+| P3-T04 | 「重新授权 Gmail」流程（前端 + 后端 redirect） | api + web | 1d | ✅ |
+| P3-T05 | `GmailSyncService.incremental`（history.list + 2 天 safety net） | application | 2d | ✅ |
+| P3-T06 | `GmailSyncService.history`（messages.list + pageToken 续传，并发 4） | application | 2d | ✅ |
+| P3-T07 | `persistGmailSync`：飞书达人过滤 + 已读规则 + reply_resolved 清理 | application | 2d | ✅ |
+| P3-T08 | `POST /api/v1/sync/gmail`（mode、pageToken）+ 前端 button | api + web | 1d | ✅ |
+| P3-T09 | Worker `GmailIncrementalSyncJob` **每 5 分钟** | worker | 1d | ✅ |
+| P3-T10 | Gmail 同步集成测试（录制 fixture，无需真实账号） | application test | 1.5d | ✅ |
 
 **Phase 3 合计：~14 人日**
 
@@ -272,18 +277,32 @@
 
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
-| P4-T01 | Spring AI starter + Kimi OpenAI 兼容 base-url 配置 | ai | 0.5d |
-| P4-T02 | Prompt 模板从旧 `lib/ai/prompts.ts` 迁到 `resources/prompts/*.st` | ai | 1d |
-| P4-T03 | `AiService.classifyEmail`（8k 模型 + JSON schema 严格输出） | ai | 1.5d |
-| P4-T04 | `AiService.generateReplyDraft`（128k） | ai | 1d |
-| P4-T05 | `AiService.checkDraft`（8k） | ai | 1d |
-| P4-T06 | `AiService.translateText`（128k） | ai | 1d |
-| P4-T07 | 降级 fallback（无 Key / 401 / 余额不足 → 邮件仍入库，UI 显示「AI 失败」） | ai | 1d |
-| P4-T08 | Gmail 同步链路接 AI（新邮件触发分类，已存在邮件跳过） | application | 1d |
-| P4-T09 | 「重新分析」按钮 API（手动触发对单封邮件再次 AI） | api + web | 0.5d |
-| P4-T10 | `ai_usage_log` 表 + 记录 token / 耗时 / 成本估算 | infrastructure | 1d |
+| P4-T01 | Spring AI starter + 多供应商配置（Moonshot + DeepSeek，`AiProviderProperties`/`AiModelRouter` + 主备 fallback，见 ADR-007） | ai | 1.5d | ✅ |
+| P4-T02 | Prompt 模板从旧 `lib/ai/prompts.ts` 迁到 `resources/prompts/*.st` | ai | 1d | ✅ |
+| P4-T03 | `AiService.classifyEmail`（8k 模型 + JSON schema 严格输出，**不含 `body_zh`**） | ai | 1.5d | ✅ |
+| P4-T04 | `AiService.generateReplyDraft`（128k） | ai | 1d | ✅ |
+| P4-T05 | `AiService.checkDraft`（8k） | ai | 1d | ✅ |
+| P4-T06 | `AiService.translateText`（**默认 8k，超长升级 32k**，按需触发） | ai | 1d | ✅ |
+| P4-T07 | 降级 fallback（无 Key / 401 / 余额不足 → 邮件仍入库，UI 显示「AI 失败」） | ai + application | 1d | ✅ |
+| P4-T08 | Gmail 同步链路接 AI（新邮件触发**轻量**分类，已存在邮件跳过，**不做全文翻译**） | application | 1d | ✅ |
+| P4-T09 | 「重新分析」按钮 API（手动触发对单封邮件再次 AI） | api + web | 0.5d | ✅ |
+| P4-T10 | `ai_usage_log` 表 + 记录 token / 耗时 / 成本估算 | infrastructure | 1d | ✅ |
 
-**Phase 4 合计：~9.5 人日**
+**Phase 4 合计：~10.5 人日**
+
+> **成本设计结论（2026-07-01 讨论定稿，详见 `02-backend-design.md` §2.8「成本设计」）**：
+> 1. `classifyEmail` 去掉 `body_zh` 全文翻译字段，只做轻量分类；Gmail 同步不再对每封邮件做全文翻译。
+> 2. 邮件正文中译改为「按需点击触发」，复用旧版 `EmailBodyViewer` 的「翻译成中文」按钮 + `POST /api/v1/ai/translate`，不新增懒加载/预取机制，不依赖浏览器自带翻译。
+> 3. 翻译不引入百度翻译 / 有道翻译等第三方 MT API：按当前报价核算，`moonshot-v1-8k` 单封成本（≈¥0.02）低于专用翻译 API（≈¥0.08~0.09/百万字符计费），且省去第三方凭证/降级/审计路径。
+> 4. 翻译类「输出主导型」任务优先用 `v1-8k`/`v1-32k`（输入输出同价 ¥12/¥24 每百万 token），不用新款 `kimi-k2.x`（输出单价 ¥20~27/百万 token 明显更高）；`generateReplyDraft` 因需完整历史上下文仍用 `128k`。
+> 5. outbound 邮件是否需要完整 AI 分类留待 P4-T03 实现时评估，未定论。
+>
+> **多供应商结论（2026-07-01 讨论定稿，详见 [`ADR-007`](./decisions/ADR-007-ai-multi-provider.md)）**：
+> 1. 同时接入 Moonshot（Kimi）+ DeepSeek，均为 OpenAI 兼容协议，复用同一套 `spring-ai-openai` 客户端，靠 `AiModelRouter` 按能力选供应商，不新增依赖。
+> 2. 切换供应商 = 改 `AI_DEFAULT_PROVIDER` 环境变量（或单个能力的 `provider` 配置）+ 填好对应 `*_API_KEY`，重启生效，不改代码。
+> 3. 主供应商调用失败自动 fallback 到备用供应商，仍失败才走本地 heuristic 兜底（三级链路）。
+> 4. DeepSeek 用 `deepseek-v4-flash`/`deepseek-v4-pro`（旧别名 2026-07-24 停用），输出单价 ¥2/百万 token，远低于 `moonshot-v1-8k` 的 ¥12/百万 token，是否切默认 provider 需先做人工质量抽样，不直接因为便宜就换默认值。
+> 5. `ai_usage_log`（P4-T10）新增 `provider` 列以便按供应商拆分成本/成功率数据。
 
 ---
 
@@ -293,28 +312,32 @@
 
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
-| P5-T01 | KOL 改名（仅工作台显示名） | api + application | 0.5d |
-| P5-T02 | KOL 阶段人工校准 | api + application | 0.5d |
-| P5-T03 | 标记/取消「无需回复」 | api + application | 0.5d |
-| P5-T04 | 邮件标记已读 / 未读 | api + application | 0.5d |
-| P5-T05 | 邮件删除（软删） | api + application | 0.5d |
-| P5-T06 | Gmail 发信单发（multipart/alternative + CC + 富文本 HTML） | integration/gmail + application | 2d |
-| P5-T07 | 批量跟进 `POST /api/v1/gmail/batch-send`（串行限流，每封独立记录） | application | 1.5d |
-| P5-T08 | 发信成功后写 outbound `emails` + 更新 `kol.last_outbound_at` + 模板 used_count++ | application | 1d |
-| P5-T09 | 模板 CRUD + 变量替换 | api + application | 1.5d |
-| P5-T10 | Team 编辑资料（角色 / mentor / 飞书运营名） | api + application | 0.5d |
-| P5-T11 | Team 标记离职（Leader 权限）→ 名下 KOL 进入团队池 | api + application | 1d |
-| P5-T12 | Team 池分配 KOL（Leader 权限） | api + application | 1d |
-| P5-T13 | 审计 `@AuditAction` + AOP 切面（所有写操作织入 `actions` 表） | application | 1.5d |
-| P5-T14 | 前端 `DraftSendPanel` 全功能（富文本 + CC + 模板插入 + 定时） | web | 2.5d |
-| P5-T15 | 前端 `KolNameEditor` / `KolStageEditor` / `ReplyResolvedButton` 接 API | web | 1d |
-| P5-T16 | 前端 `MarkEmailReadButton` / `AutoMarkRead` / `DeleteEmailButton` 接 API | web | 1d |
-| P5-T17 | 前端 `TemplateLibrary` CRUD | web | 1d |
-| P5-T18 | 前端 `BatchFollowupButton` 接 API（含进度反馈） | web | 1d |
-| P5-T19 | 前端 Team 页面 + `AssignPanel` 接 API | web | 1d |
-| P5-T20 | 真实 Gmail 冒烟（自发自收 + CC + 富文本回读） | qa | 0.5d |
+| P5-T01 | KOL 改名（仅工作台显示名） | api + application | 0.5d | ✅ |
+| P5-T02 | KOL 阶段人工校准 | api + application | 0.5d | ✅ |
+| P5-T03 | 标记/取消「无需回复」 | api + application | 0.5d | ✅ |
+| P5-T04 | 邮件标记已读 / 未读 | api + application | 0.5d | ✅ |
+| P5-T05 | 邮件删除（软删） | api + application | 0.5d | ✅ |
+| P5-T06 | Gmail 发信单发（multipart/alternative + CC + 富文本 HTML） | integration/gmail + application | 2d | ✅ |
+| P5-T07 | 批量跟进 `POST /api/v1/gmail/batch-send`（串行限流，每封独立记录） | application | 1.5d | ✅ |
+| P5-T08 | 发信成功后写 outbound `emails` + 更新 `kol.last_outbound_at` + 模板 used_count++ | application | 1d | ✅ |
+| P5-T09 | 模板 CRUD + 变量替换 | api + application | 1.5d | ✅ |
+| P5-T10 | Team 编辑资料（角色 / mentor / 飞书运营名） | api + application | 0.5d | ✅ |
+| P5-T11 | Team 标记离职（Leader 权限）→ 名下 KOL 进入团队池 | api + application | 1d | ✅ |
+| P5-T12 | Team 池分配 KOL（Leader 权限） | api + application | 1d | ✅ |
+| P5-T13 | 审计 `@AuditAction` + AOP 切面（所有写操作织入 `actions` 表） | application | 1.5d | ✅ |
+| P5-T14 | 前端 `DraftSendPanel` 全功能（富文本 + CC + 模板插入 + 定时） | web | 2.5d | ✅ |
+| P5-T15 | 前端 `KolNameEditor` / `KolStageEditor` / `ReplyResolvedButton` 接 API | web | 1d | ✅ |
+| P5-T16 | 前端 `MarkEmailReadButton` / `AutoMarkRead` / `DeleteEmailButton` 接 API | web | 1d | ✅ |
+| P5-T17 | 前端 `TemplateLibrary` CRUD | web | 1d | ✅ |
+| P5-T18 | 前端 `BatchFollowupButton` 接 API（含进度反馈） | web | 1d | ✅ |
+| P5-T19 | 前端 Team 页面 + `AssignPanel` 接 API | web | 1d | ✅ |
+| P5-T20 | 真实 Gmail 冒烟（自发自收 + CC + 富文本回读） | qa | 0.5d | ✅ |
 
 **Phase 5 合计：~20 人日**
+
+#### P5-T20 — 真实 Gmail 冒烟 ✅
+
+> **完成（2026-07-03）**：`maildesk-integration` 新增 `GmailSendSmokeTest` + `GmailSmokeEnv`（`@EnabledIf` 门禁，缺 env 静默跳过）；验证 send → getMessage 回读 To/Cc/HTML/plain；runbook [`scripts/gmail-send-smoke.md`](../scripts/gmail-send-smoke.md)；`06-testing.md` §2.3 引用。`mvn -pl maildesk-integration verify` 绿（无 env 时 smoke skipped）。
 
 ---
 
@@ -324,21 +347,96 @@
 
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
-| P6-T01 | `scheduled_emails` 状态机（scheduled / processing / sent / failed / cancelled） | domain | 0.5d |
-| P6-T02 | 定时邮件 CRUD + 发送前取消 | api + application | 1d |
-| P6-T03 | Worker `ScheduledEmailDispatchJob` 每分钟原子认领（`UPDATE ... RETURNING`） | worker | 1.5d |
-| P6-T04 | 失败重试 ≤3 次，指数退避；超过停止 + UI 显示 failed | worker | 1d |
-| P6-T05 | 富文本 `english_body_html` 字段保留 + 发送 | application + integration/gmail | 0.5d |
-| P6-T06 | Docker 镜像（API + Worker 各一）+ multi-stage Dockerfile | ops | 1d |
-| P6-T07 | K8s manifests / Helm chart | ops | 2d |
-| P6-T08 | OpenTelemetry + Prometheus + Grafana dashboard（同步耗时 / AI 失败率 / Worker lag） | ops | 2d |
-| P6-T09 | 监控告警规则（Gmail 同步失败 > 阈值 / AI 失败率 > 10% / Worker lag > 5min） | ops | 1d |
-| P6-T10 | 数据迁移脚本（旧 Supabase → 新 PG），含 diff 校验 | ops/scripts | 3d |
-| P6-T11 | 双跑 + 切流方案演练（dry-run） | ops | 1d |
-| P6-T12 | 回滚预案 + Runbook | ops | 0.5d |
-| P6-T13 | 生产环境密钥进 Secrets Manager（不写 yml） | ops | 0.5d |
+| P6-T01 | `scheduled_emails` 状态机（scheduled / processing / sent / failed / cancelled） | domain | 0.5d | ✅ |
+| P6-T02 | 定时邮件 CRUD + 发送前取消 | api + application | 1d | ✅ |
+| P6-T03 | Worker `ScheduledEmailDispatchJob` 每分钟原子认领（`UPDATE ... RETURNING`） | worker | 1.5d | ✅ |
+| P6-T04 | 失败重试 ≤3 次，指数退避；超过停止 + UI 显示 failed | worker | 1d | ✅ |
+| P6-T05 | 富文本 `english_body_html` 字段保留 + 发送 | application + integration/gmail | 0.5d | ✅ |
+| P6-T06 | Docker 镜像（API + Worker 各一）+ multi-stage Dockerfile | ops | 1d | ✅ |
+| P6-T07 | K8s manifests / Helm chart | ops | 2d | ✅ |
+| P6-T08 | OpenTelemetry + Prometheus + Grafana dashboard（同步耗时 / AI 失败率 / Worker lag） | ops | 2d | ✅ |
+| P6-T09 | 监控告警规则（Gmail 同步失败 > 阈值 / AI 失败率 > 10% / Worker lag > 5min） | ops | 1d | ✅ |
+| P6-T10 | 数据迁移脚本（旧 Supabase → 新 PG），含 diff 校验 | ops/scripts | 3d | ✅ |
+| P6-T11 | 双跑 + 切流方案演练（dry-run） | ops | 1d | ✅ |
+| P6-T12 | 回滚预案 + Runbook | ops | 0.5d | ✅ |
+| P6-T13 | 生产环境密钥进 Secrets Manager（不写 yml） | ops | 0.5d | ✅ |
 
 **Phase 6 合计：~15.5 人日**
+
+#### P6-T01～T03 — 定时邮件状态机 + 派发 ✅
+
+> **完成（2026-07-03）**：
+> - **T01**：`ScheduledEmailStatus` enum + `ScheduledEmailStateMachine`（cancel / claim 规则）
+> - **T02**：`ScheduledEmailApplicationService` create/list/cancel 接状态机；取消仅 `scheduled` 态
+> - **T03**：`ScheduledEmailMapper.claimDueBatch`（`FOR UPDATE SKIP LOCKED` + `RETURNING`）· `ScheduledEmailDispatchService` · Worker `ScheduledEmailDispatchJob`（cron 每分钟 · Redis 锁 · 复用 `GmailSendExecutor`）
+> - 单测：`ScheduledEmailStateMachineTest` · `ScheduledEmailApplicationServiceCancelTest` · `ScheduledEmailDispatchServiceTest`
+> - `mvn -pl maildesk-worker -am verify` BUILD SUCCESS
+
+#### P6-T04～T05 — 重试退避 + 富文本派发 ✅
+
+> **完成（2026-07-03）**：
+> - **T04**：`ScheduledEmailRetryBackoff`（`2^(n-1)` 分钟）· `claimDueBatch` SQL 退避过滤 · 第 3 次失败终态 WARN 日志 · 前端「失败（将重试）/（已停止）」
+> - **T05**：派发链路传 `englishBodyHtml` → `GmailSendExecutor` multipart · 单测 `dispatchClaimed_sendsHtmlBodyForMultipartAlternative` · 定时列表显示「富文本/CC」列
+
+#### P6-T06 — Docker 镜像 ✅
+
+> **完成（2026-07-03）**：
+> - 根目录 **multi-stage `Dockerfile`**（`BUILD_MODULE=maildesk-api|maildesk-worker` · Maven 构建 · Temurin 21 JRE Alpine · 非 root · Actuator 健康检查）
+> - **`.dockerignore`** · **`docker-compose.app.yml`**（叠加 `docker-compose.dev.yml` 本地全栈验证）
+> - Worker **`management.server.port`** 默认 8081（Docker/K8s 探针）
+> - CI **`docker-build`** job 构建双镜像（需 GitHub runner Docker）
+> - 本机无 Docker → 镜像构建待 CI 实锤
+
+#### P6-T07 — K8s / Helm ✅
+
+> **完成（2026-07-03）**：
+> - **`deploy/helm/maildesk/`** Helm chart：API + Worker Deployment/Service、可选 Ingress + API HPA、ServiceAccount、Secret 模板（`secrets.create=false` 默认，对接 External Secrets / P6-T13）
+> - 环境变量对齐 `.env.example` / `application.yml`（DB/Redis/OAuth/飞书/AI 密钥经 Secret 注入）
+> - Worker 默认 **1 副本** + 宽松 liveness（R6/R7）；探针 `/actuator/health`
+> - **`deploy/k8s/README.md`** · `values-local.example.yaml` · CI **`helm-lint`** + `helm template` dry render
+> - 本机无 Helm → chart 校验待 CI 实锤
+
+#### P6-T08 — 可观测性 ✅
+
+> **完成（2026-07-03）**：
+> - **Micrometer + Prometheus**：`/actuator/prometheus` · 指标 `gmail.sync.duration` / `gmail.sync.failed` / `ai.invocation` / `ai.classify.tokens` / `scheduled_email.dispatch.lag_seconds`
+> - **OpenTelemetry OTLP** tracing（`application-observability.yml` · 默认 10% 采样）
+> - **Grafana dashboard** `deploy/grafana/dashboards/maildesk-overview.json` · 本地栈 `docker-compose.observability.yml`
+> - Helm **ServiceMonitor** + Prometheus scrape annotations · 单测 `MaildeskMetricsTest` / `AiUsageMicrometerTest`
+
+#### P6-T09 — 监控告警 ✅
+
+> **完成（2026-07-03）**：
+> - **`deploy/prometheus/alerts/maildesk.rules.yml`**：Gmail 15m≥3 失败 · AI 失败率 >10% · dispatch lag >300s · target down
+> - **`docker-compose.observability.yml`** 挂载 alert rules · Helm **`PrometheusRule`**（`alerts.enabled`）
+
+#### P6-T10 — 数据迁移 ✅
+
+> **完成（2026-07-03）**：
+> - **`kol-mail-desk-v2-docs/scripts/migration/`**：`migrate.sh` + dblink SQL（profiles → actions）· `diff.sh` 容差校验 + KOL 最新邮件零容差
+> - **`migrate-google-credentials.sh`** + Worker `LegacyGoogleCredentialMigrator`（`spring.profiles.active=migration`）
+> - Runbook：`scripts/migration/README.md` · 容差对齐 `06-testing.md § 七`
+
+#### P6-T11 — 双跑 + 切流演练 ✅
+
+> **完成（2026-07-03）**：
+> - **`scripts/cutover/`**：`dual-run-drill.sh`（feature-parity + diff + health 门禁）· `README.md` 双跑架构
+> - **`cutover-runbook.md`**：生产切流时间线、RACI、drill sign-off 模板
+> - 交叉引用：`migration/README.md` · `deploy/k8s/README.md` · `06-testing.md §7` · `04-phases.md`
+
+#### P6-T12 — 回滚 Runbook ✅
+
+> **完成（2026-07-03）**：
+> - **`scripts/cutover/rollback-runbook.md`**：决策矩阵、RTO/RPO、15min 回滚步骤、通信模板
+> - 切流前失败 / 双跑 staging 失败分支；与 `07-risks.md` R8/R11 对齐
+
+#### P6-T13 — 生产密钥 Secrets Manager ✅
+
+> **完成（2026-07-03）**：
+> - **`deploy/secrets/README.md`**：AWS/GCP SM 写入 · IRSA/WI · 轮换 · 验证
+> - Helm **`external-secret.yaml`** + **`secret-store.yaml`** · **`values-prod.example.yaml`**
+> - **`deploy/secrets/verify-k8s-secret.sh`** · CI **`guard-no-plaintext-secrets.sh`**
+> - 默认 `secrets.create=false` · `externalSecrets.enabled=true` 生产路径
 
 ---
 

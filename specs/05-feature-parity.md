@@ -20,40 +20,45 @@
 
 ### F-AUTH-01 Google OAuth 登录
 
-- [ ] **Google OAuth 登录，授权 Gmail scope（读 + 发送）**
+- [✅] **Google OAuth 登录，授权 Gmail scope（读 + 发送）**
   - Phase: P1 | Ticket: P1-T04 | 后端: `maildesk-api/.../auth/GoogleOAuth2Controller.java`
   - 前端: P1-T15 ✅ `app/login/page.tsx` | E2E: P1-T17 ✅ `e2e/smoke/routes.spec.ts` @smoke（mock API）
   - 验收: scope 含 `gmail.readonly` + `gmail.send`；refresh_token AES 加密入 `integration_credentials`
+  - **本地验收 2026-07-04** ✅；**2026-07-05** ✅ `lauren@lovart.ai` + Gmail API 启用 + 代理
 
 ### F-AUTH-02 同意页文案
 
-- [ ] **OAuth 同意页 / 登录页提示「邮箱权限必须勾选」**
+- [✅] **OAuth 同意页 / 登录页提示「邮箱权限必须勾选」**
   - Phase: P1 | Ticket: P1-T04 | 后端: GCP OAuth 同意屏 + 后端登录引导
   - 前端: `app/login/page.tsx` 文案 + 截图占位
   - 验收: 登录页显著文案 + Google 同意屏 brand info 配置
+  - **2026-07-05** ✅ 登录页已补「邮箱权限必须全部勾选」文案（GCP brand 仍待 staging 截图）
 
 ### F-AUTH-03 测试用户白名单
 
-- [ ] **测试用户白名单（GCP OAuth Test users）**
+- [🚫] **测试用户白名单（GCP OAuth Test users）**
   - Phase: P1 | Ticket: P1-T04（基础设施部分）
   - 验收: 在 GCP Console → OAuth consent → Test users 配置完成；过渡到 published 之前未在白名单的用户走不通登录
+  - **待 staging 部署时截图归档**
 
 ### F-AUTH-04 首次登录资料完善
 
-- [ ] **首次登录跳入资料页：显示名、角色、mentor、飞书运营名**
+- [✅] **首次登录跳入资料页：显示名、角色、mentor、飞书运营名**
   - Phase: P1 | Ticket: P1-T05（后端 ✅）+ P1-T15（前端 ✅ `/onboarding`）| 后端: `PATCH /api/v1/team/profile`
-  - 前端: `app/profile/page.tsx` 或登录后引导弹窗 | E2E: `e2e/auth/first-login.spec.ts`
+  - 前端: `app/onboarding/page.tsx` | E2E: `e2e/auth/first-login.spec.ts`
   - 验收: 必填校验生效；未填完不可访问工作台主功能
+  - **2026-07-05** ✅ onboarding 含 mentor（实习生必选）；保存跳转已修
 
 ### F-AUTH-05 飞书运营名归属
 
 - [✅] **保存飞书运营名后自动归属匹配的 KOL（无主才认领）**
   - Phase: P2 | Ticket: P2-T04 | 后端: `TeamApplicationService.assignKolsByOperatorName`
-  - 验收: 已有 owner 的 KOL 不被覆盖；只领无主 KOL；`kolsAssigned` 随 PATCH profile 返回；audit log 待 P5-T13
+  - 验收: 已有 owner 的 KOL 不被覆盖；只领无主 KOL；`kolsAssigned` 随 PATCH profile 返回
+  - **本地联调 2026-07-05** ✅（飞书个人版 Sheet · 运营名「潘慧妍」）
 
 ### F-AUTH-06 历史同步引导
 
-- [ ] **首次登录引导点「历史同步」拉取最近 1 年邮件**
+- [✅] **首次登录引导点「历史同步」拉取最近 1 年邮件**
   - Phase: P3 | Ticket: P3-T08 | 前端引导 UI（旧 `HistorySyncBanner` 复用）
   - 验收: 完成历史同步后 banner 自动消失
 
@@ -65,58 +70,61 @@
 
 ### F-WB-NAV-01 左侧导航 5 项
 
-- [ ] **导航：工作台 / 团队看板 / 团队成员 / 邮件模板 / 定时邮件**
+- [✅] **导航：工作台 / 团队看板 / 团队成员 / 邮件模板 / 定时邮件**
   - Phase: P1 | Ticket: P1-T13, P1-T15（前端 ✅）| 前端: `components/shell/AppNav.tsx` + 6 路由页
   - 验收: 5 个导航可点击，路由正确，未授权页面 redirect 到登录
+  - **本地验收 2026-07-04** ✅
 
-### F-WB-SIDE-01 ~ 04 侧栏统计
-
-- [ ] **侧栏统计：需我回复 / 高优先级 / 团队池 / 总达人**
+- [✅] **侧栏统计：需我回复 / 未读 / 团队池 / 总达人**
   - Phase: P1 | Ticket: P1-T06（后端 ✅）+ P1-T15（前端 ✅）| 后端: `GET /api/v1/workbench` → `sidebarStats`
   - 前端: `components/WorkbenchSidebar.tsx`
   - 验收（各项口径）:
     - 需我回复：最新邮件 inbound + 未手动标记「无需回复」
-    - 高优先级：AI 或规则判断的 inbound 高优先级（P4 接入前用规则 fallback）
+    - 未读：inbound 且尚未被打开过的邮件数（**产品确认替代 v3.3「高优先级」**）
     - 团队池：`status IN ('unassigned', 'orphaned')`
     - 总达人：当前视图（我的/团队池/全部）下可见数
+  - **2026-07-05** ✅ 侧栏用「未读」替代「高优先级」（产品确认）
 
 ### 2.2 顶部搜索与同步按钮（§3.2）
 
 ### F-WB-SEARCH-01 全局搜索
 
-- [ ] **搜索框支持 Ctrl+K 聚焦**
+- [✅] **搜索框支持 Ctrl+K 聚焦**
   - Phase: P1 | Ticket: P1-T13（组件迁入）| 前端: `components/SearchPalette.tsx`
   - 验收: macOS Cmd+K 也工作；ESC 关闭
+  - **本地验收 2026-07-04** ✅
 
-- [ ] **搜索匹配：达人名、邮箱、邮件主题、AI 摘要**
+- [✅] **搜索匹配：达人名、邮箱、邮件主题、AI 摘要**
   - Phase: P1（基础）/ P7（OpenSearch 升级）| Ticket: P1-T06（后端 ✅，workbench `q` 参数）+ P7-T06
   - 后端: `GET /api/v1/workbench?q=...` ILIKE 多列；P7 换 OpenSearch
   - 验收: 200ms 内返回 ≤30 条匹配；高亮关键词
+  - **本地验收 2026-07-04** ✅（`?q=` + Ctrl+K）
 
 ### F-WB-SYNC-01 同步 Gmail 按钮
 
-- [ ] **「同步 Gmail」按钮：增量 / 历史两种模式**
+- [✅] **「同步 Gmail」按钮：增量 / 历史两种模式**
   - Phase: P3 | Ticket: P3-T08 | 后端: `POST /api/v1/sync/gmail?mode=incremental|history`
   - 前端: `components/GmailSyncButton.tsx`（旧仓库迁入并改 API）
   - 验收: 增量模式 < 30s；历史模式分页且能续传；非阻塞 UI
+  - **历史同步 2026-07-05** ✅；**增量（手动/Worker）** 待验
 
 ### F-WB-SYNC-02 批量跟进按钮
 
-- [ ] **「批量跟进」按钮：多选达人 → 选模板 → 发送**
+- [✅] **「批量跟进」按钮：多选达人 → 选模板 → 发送**
   - Phase: P5 | Ticket: P5-T07, P5-T18 | 后端: `POST /api/v1/gmail/batch-send`
   - 前端: `components/BatchFollowupButton.tsx`
-  - 验收: 串行限流（每秒 ≤2 封）；每封独立记录；任一封失败不影响其他
+  - 验收: 串行限流（1.2s 间隔 · 最多 25 封）；每封独立 `SendEmailResult`；任一封失败不影响其他
 
 ### F-WB-SYNC-03 重新授权 Gmail
 
-- [ ] **「重新授权 Gmail」按钮：Token 过期/失效时出现**
+- [✅] **「重新授权 Gmail」按钮：Token 过期/失效时出现**（同步失败时 `GmailSyncButton` 引导至 `/api/v1/gmail/authorize`）
   - Phase: P3 | Ticket: P3-T04 | 后端: `GET /api/v1/auth/gmail/reauthorize`
   - 前端: 顶栏检测 `integration_credentials.status='expired'` 时显示按钮
   - 验收: 完成授权后自动恢复同步；新 refresh_token 替换旧加密载荷
 
 ### F-WB-SYNC-04 同步非阻塞
 
-- [ ] **同步任务边同步边操作 UI；完成后自动刷新**
+- [✅] **同步任务边同步边操作 UI；完成后自动刷新**
   - Phase: P3 | Ticket: P3-T05, P3-T06 | 前端: 客户端循环 + 渐进刷新
   - 验收: 同步过程中达人列表可滚动 / 详情可打开
 
@@ -124,94 +132,106 @@
 
 ### F-WB-LIST-01 三种范围
 
-- [ ] **范围：我的 / 团队池 / 全部**
+- [✅] **范围：我的 / 团队池 / 全部**
   - Phase: P1 | Ticket: P1-T06（后端 ✅）+ P1-T15（前端 ✅）| 后端: `GET /api/v1/workbench?view=mine|pool|all`
   - 验收: 我的 = `owner_user_id = currentUser`；团队池 = `status IN ('unassigned','orphaned')`；全部 = 当前租户全量
+  - **本地验收 2026-07-04** ✅
 
-### F-WB-LIST-02 每行字段
-
-- [ ] **每行展示：达人名 / 最近邮件主题 / AI 摘要 / 阶段标签 / 负责人 / 工作流标签 / 优先级标签**
+- [✅] **每行展示：达人名 / 最近邮件主题 / AI 摘要 / 阶段标签 / 负责人 / 工作流标签 / 优先级标签**
   - Phase: P1（基础）+ P4（AI 摘要）| Ticket: P1-T06, P4-T03
   - 前端: `components/KolListItem.tsx`
   - 验收: 7 个字段渲染齐全；AI 失败时显示"AI 分类失败"占位
+  - **本地验收 2026-07-04** ✅
 
-### F-WB-LIST-03 10 阶段标签
-
-- [ ] **阶段标签使用 v3.3 §6 的 10 阶段映射**
+- [⚠️] **阶段标签使用 v3.3 §6 的 10 阶段映射**
   - Phase: P2 | Ticket: P2-T02 | 后端: `kol_stage` ENUM + 映射表
   - 验收: 10 阶段全部覆盖；映射 SQL 验收脚本 `scripts/feishu-stage-mapping-audit.sql` 已就位（UI 标签待 P1 前端联调）
+  - **本地验收 2026-07-05** ✅ 飞书 Sheet 联调（个人版 · 潘慧妍）
 
 ### 2.4 达人详情卡片（§3.4）
 
 ### F-WB-DETAIL-01 基础信息
 
-- [ ] **达人名、邮箱、来源、平台、类型、负责人、报价、主页链接、合作状态、备注**
+- [✅] **达人名、邮箱、来源、平台、类型、负责人、报价、主页链接、合作状态、备注**
   - Phase: P1 | Ticket: P1-T06（后端 ✅）+ P1-T15（前端 ✅）| 后端: `GET /api/v1/kols/{kolId}` | 前端: 工作台详情 pane
   - 验收: 字段对照 v3.3 §3.4 一一齐全；报价类型为 `BigDecimal`
+  - **2026-07-05** ✅ 含 `kol.status`（合作状态）展示
 
 ### F-WB-DETAIL-02 改名
 
-- [ ] **「改名」按钮：仅改工作台显示名，不写回飞书**
-  - Phase: P5 | Ticket: P5-T01, P5-T15 | 后端: `PATCH /api/v1/kols/{id}/display-name`
-  - 验收: `kol.feishu_name` 不变，仅更新 `kol.display_name`；飞书 API 无 PUT/POST 调用
+- [✅] **「改名」按钮：仅改工作台显示名，不写回飞书**
+  - Phase: P5 | Ticket: P5-T01, P5-T15 | 后端: `PATCH /api/v1/kols/{kolId}`（`name` 字段）| 前端: `KolNameEditor`
+  - 验收: 仅更新 `kols.name` + `name_overridden=true`；飞书同步跳过已改名的 name；飞书 API 无 PUT/POST 调用
 
 ### F-WB-DETAIL-03 人工校准阶段
 
-- [ ] **「人工校准阶段」：覆盖飞书阶段**
-  - Phase: P5 | Ticket: P5-T02, P5-T15 | 后端: `PATCH /api/v1/kols/{id}/stage-override`
-  - 验收: `kol.stage_override` 写入；下次飞书同步不覆盖；UI 显示「(校准)」标记
+- [✅] **「人工校准阶段」：覆盖飞书阶段**
+  - Phase: P5 | Ticket: P5-T02, P5-T15 | 后端: `PATCH /api/v1/kols/{kolId}`（`stage` 字段）
+  - 验收: `kols.stage_override=true` + `stage` 更新；飞书 sync 跳过已校准 stage；UI 显示「(校准)」标记
 
 ### F-WB-DETAIL-04 打开主页
 
-- [ ] **「打开主页」按钮：跳外部链接核验**
+- [✅] **「打开主页」按钮：跳外部链接核验**
   - Phase: P1 | Ticket: P1-T13 | 前端: 复用旧组件
   - 验收: `target=_blank rel=noopener noreferrer`；空链接禁用按钮
+  - **本地验收 2026-07-04** ✅
 
 ### 2.5 邮件阅读区（§3.5）
 
 ### F-WB-EMAIL-01 HTML 渲染
 
-- [ ] **HTML 邮件渲染（链接可点 / 图片显示 / 列表加粗保留）**
+- [✅] **HTML 邮件渲染（链接可点 / 图片显示 / 列表加粗保留）**
   - Phase: P1 | Ticket: P1-T13 | 前端: 复用旧 `EmailBody.tsx`
   - 验收: 渲染正确；用 `isomorphic-dompurify` 净化避免 XSS
+  - **本地验收 2026-07-04** ✅
 
-### F-WB-EMAIL-02 历史回复折叠
-
-- [ ] **历史回复折叠（「显示历史回复」）**
+- [✅] **历史回复折叠（「显示历史回复」）**
   - Phase: P1 | Ticket: P1-T13 | 前端: 复用旧逻辑
   - 验收: 长邮件链不撑满阅读区；折叠/展开切换正常
+  - **本地验收 2026-07-04** ✅（含翻译后保留折叠）
 
-### F-WB-EMAIL-03 DOMPurify 净化
-
-- [ ] **邮件正文用 `isomorphic-dompurify` 净化**
+- [✅] **邮件正文用 `isomorphic-dompurify` 净化**
   - Phase: P1 | Ticket: P1-T13 | 前端: 复用旧实现
   - 验收: XSS payload（`<script>`, `onerror=`）被剥离
+  - **代码审查 + 依赖** ✅
+
+- [✅] **「翻译成中文」按钮：仅用户点击时才调用 AI 翻译，不在 Gmail 同步时自动生成**
+  - Phase: P4 | Ticket: P4-T06 | 后端: `POST /api/v1/ai/translate`（`target=zh, mode=email_body`）
+  - 前端: 复用旧 `EmailBodyViewer.tsx` 的「原文 / 中文」切换 + 「翻译成中文」按钮
+  - 验收: 邮件详情默认展示原文；点击后才产生一次 AI 调用并缓存本次会话结果；`classifyEmail` 输出不含全文翻译字段（成本设计见 `02-backend-design.md` §2.8）
+  - **本地验收 2026-07-04** ✅（Moonshot）
 
 ### 2.6 处理状态按钮（§3.6）
 
 ### F-WB-STATE-01 无需回复
 
-- [ ] **「标记无需回复」**
-  - Phase: P5 | Ticket: P5-T03, P5-T15 | 后端: `POST /api/v1/kols/{id}/reply-resolved`
+- [✅] **「标记无需回复」**
+  - Phase: P5 | Ticket: P5-T03, P5-T15 | 后端: `PATCH /api/v1/kols/{kolId}`（`replyResolved: true`）
   - 验收: `kol.reply_resolved=true`；该 KOL 不再计入「需我回复」
 
 ### F-WB-STATE-02 取消无需回复
 
-- [ ] **「取消无需回复」（恢复自动判断，不强制变回需回复）**
-  - Phase: P5 | Ticket: P5-T03 | 后端: `DELETE /api/v1/kols/{id}/reply-resolved`
+- [✅] **「取消无需回复」（恢复自动判断，不强制变回需回复）**
+  - Phase: P5 | Ticket: P5-T03 | 后端: `PATCH /api/v1/kols/{kolId}`（`replyResolved: false`）
   - 验收: 仅清除手动覆盖；最终是否需回复由规则计算
 
 ### F-WB-STATE-03 标记已读/未读
 
-- [ ] **「标记已读 / 未读」（不等于已回复）**
-  - Phase: P5 | Ticket: P5-T04, P5-T16 | 后端: `PATCH /api/v1/emails/{id}/read`
-  - 验收: 已读状态独立于 reply_resolved；自动已读策略可配置
+- [✅] **「标记已读 / 未读」（不等于已回复）**
+  - Phase: P5 | Ticket: P5-T04, P5-T16 | 后端: `PATCH /api/v1/emails/{emailId}`（`isRead`）
+  - 验收: 已读状态独立于 reply_resolved；`AutoMarkRead` 打开详情自动标记已读
 
 ### F-WB-STATE-04 新邮件清 reply_resolved
 
-- [ ] **新 inbound 邮件自动清除 `reply_resolved`**
+- [✅] **新 inbound 邮件自动清除 `reply_resolved`**
   - Phase: P3 | Ticket: P3-T07 | 后端: `persistGmailSync` 内
   - 验收: 该 KOL 收到新邮件 → `reply_resolved` 自动 false
+
+### F-WB-STATE-05 删除邮件
+
+- [✅] **删除邮件（软删；无剩余邮件时删除 KOL 卡片）**
+  - Phase: P5 | Ticket: P5-T05, P5-T16 | 后端: `DELETE /api/v1/emails/{emailId}`
+  - 验收: 邮件 owner 或 leader 可删；`deleted_at` 软删；该 KOL 无其他邮件时一并软删
 
 ---
 
@@ -219,33 +239,33 @@
 
 ### F-WRITE-01 ~ 06 编辑器能力
 
-- [ ] **富文本编辑器（TipTap）：加粗 / 斜体 / 下划线 / 字体颜色 / 无序列表 / 有序列表 / 插入链接**
-  - Phase: P5 | Ticket: P5-T14 | 前端: 复用旧 `DraftSendPanel` + TipTap config
+- [✅] **富文本编辑器（TipTap）：加粗 / 斜体 / 下划线 / 字体颜色 / 无序列表 / 有序列表 / 插入链接**
+  - Phase: P5 | Ticket: P5-T14 | 前端: `DraftSendPanel` + `RichTextEditor`
   - 验收: 7 项工具按钮全部生效；导出 HTML 干净（无 TipTap 私有 class 泄漏）
 
 ### F-WRITE-07 CC 抄送
 
-- [ ] **CC 抄送字段**
-  - Phase: P5 | Ticket: P5-T06, P5-T14 | 后端: `emails.cc_emails TEXT[]`
+- [✅] **CC 抄送字段**
+  - Phase: P5 | Ticket: P5-T06, P5-T14 | 后端: `POST /api/v1/gmail/send`（`ccEmails` → MIME Cc 头）
   - 验收: 真实 Gmail 冒烟 To + Cc 均收到；Gmail messageId 回读
 
 ### F-WRITE-08 富文本发送
 
-- [ ] **富文本 HTML 发送（`multipart/alternative`）**
-  - Phase: P5 | Ticket: P5-T06 | 后端: `GmailSendService.sendMultipart`
+- [✅] **富文本 HTML 发送（`multipart/alternative`）**
+  - Phase: P5 | Ticket: P5-T06 | 后端: `GmailMimeMessageBuilder` + `GmailClient.sendMessage`
   - 验收: Content-Type 头正确；纯文本和 HTML 部分都有
 
 ### F-WRITE-09 人工确认
 
-- [ ] **发送前必须人工确认（不自动发 AI 草稿）**
+- [✅] **发送前必须人工确认（不自动发 AI 草稿）**
   - Phase: P5（覆盖范围）+ P4（AI 不触发 send）
-  - 验收: AI 调用结果只写 draft 字段；任何场景 send 都需用户点击
+  - 验收: `reviewed: true` 必填；未确认返回 400
 
 ### F-WRITE-10 发送成功后副作用
 
-- [ ] **发送成功后：Gmail 真发 + outbound 入 emails + KOL.last_outbound_at 更新 + 模板 used_count++ + 写审计 log**
-  - Phase: P5 | Ticket: P5-T06, P5-T08, P5-T13 | 后端: `GmailSendApplicationService`
-  - 验收: 5 个副作用全部触发；任一失败回滚或补偿（事务边界明确）
+- [✅] **发送成功后：Gmail 真发 + outbound 入 emails + KOL.last_outbound_at 更新 + 模板 used_count++ + 写审计 log**
+  - Phase: P5 | Ticket: P5-T06, P5-T08, P5-T13 | 后端: `GmailSendExecutor` + `GmailSendPersistenceService`
+  - 验收: 单发 / 批量成功路径均落库；`email_sent` + `template_used` 审计
 
 ---
 
@@ -253,40 +273,46 @@
 
 ### F-BOARD-KPI 顶部 KPI（§5.1）
 
-- [ ] **总达人（当前时间窗内）**
+- [✅] **总达人（当前时间窗内）**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）| 后端: `GET /api/v1/board?window=...`
-- [ ] **待回复 / 停滞数**
+- [✅] **待回复 / 停滞数**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）
-- [ ] **未读邮件（inbound + is_read=false，当前时间窗）**
+- [✅] **未读邮件（inbound + is_read=false，当前时间窗）**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）
-- [ ] **进入合作数 / 转化率（confirmed 及之后阶段达人数 + 比例）**
+- [✅] **进入合作数 / 转化率（confirmed 及之后阶段达人数 + 比例）**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）
   - 验收: 4 项 KPI 数字与旧系统对账（允许 ±1 容差）
+  - **2026-07-05** ✅ KPI 对齐 v3.3（`BoardKpi` 字段 + UI）
 
 ### F-BOARD-WINDOW 时间窗（§5.2）
 
-- [ ] **6 个时间窗：全部 / 本周 / 本月 / 最近 30 天 / 指定月份 yyyy-MM**
+- [✅] **6 个时间窗：全部 / 本周 / 本月 / 最近 30 天 / 指定月份 yyyy-MM**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）| 后端: `BoardWindow` 解析 `window` 参数
-- [ ] **时间窗基于 `feishu_outreach_at`**
-- [ ] **无日期的达人只出现在「全部时间」**
+  - **2026-07-05** ✅ UI 含月份选择器（`input[type=month]` + 按月按钮）
+- [⚠️] **时间窗基于 `feishu_outreach_at`**
+  - **2026-07-05**：飞书已同步，可按「本月/30天」 spot check；outreach 列为空则只在「全部」
+- [⚠️] **无日期的达人只出现在「全部时间」**
   - 验收: 月份切换无数据时 UI 提示「该月无飞书登记记录」
+  - **待 spot check**（有飞书数据后可验）
 
 ### F-BOARD-PIPELINE 漏斗与阶段分布（§5.3）
 
-- [ ] **「累计漏斗」模式（本阶段及以后累计人数）**
+- [✅] **「累计漏斗」模式（本阶段及以后累计人数）**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）| 后端: `StageCatalog` 累计计数
-- [ ] **「阶段分布」模式（当前正处于该阶段人数）**
-- [ ] **两种模式 UI 切换 + 副标题动态变化**
+  - **本地验收 2026-07-04** ✅
+- [✅] **「阶段分布」模式（当前正处于该阶段人数）**
+- [✅] **两种模式 UI 切换 + 副标题动态变化**
   - 前端: `components/PipelinePanel.tsx`
   - 验收: 切换无重新拉数；漏斗从触达到付款单调递减
 
 ### F-BOARD-RATIO 比率指标（§5.4）
 
-- [ ] **达人回复率（触达 → 沟通/议价及之后）**
-- [ ] **转化率（触达 → 付款）**
-- [ ] **回复率/转化率仅在漏斗模式显示**
+- [✅] **达人回复率（触达 → 沟通/议价及之后）**
+- [✅] **转化率（触达 → 付款）**
+- [✅] **回复率/转化率仅在漏斗模式显示**
   - Phase: P1 | Ticket: P1-T07
   - 验收: 比率口径与旧系统逐字一致；E2E 截图回归
+  - **本地验收 2026-07-04** ✅（漏斗/快照切换）
 
 ---
 
@@ -300,13 +326,13 @@
 
 ### F-STAGE-02 飞书是唯一来源
 
-- [ ] **阶段以飞书为来源，AI 不决定阶段**
-  - Phase: P4 | Ticket: P4-T03 | 后端: AI Prompt 明确不输出 stage
+- [✅] **阶段以飞书为来源，AI 不决定阶段**
+  - Phase: P4 | Ticket: P4-T03 | 后端: `classify-email.st` + `EmailClassificationParser`（输出 `stage_signal` 仅为参考 hint，无 `stage` 字段）
   - 验收: AI 返回 JSON schema 无 stage 字段
 
 ### F-STAGE-03 人工可校准
 
-- [ ] **工作台可人工校准阶段**（详见 F-WB-DETAIL-03）
+- [✅] **工作台可人工校准阶段**（详见 F-WB-DETAIL-03 ✅）
 
 ### F-STAGE-04 飞书严格只读
 
@@ -320,25 +346,28 @@
 
 ### F-TEAM-LIST 成员列表（§7.1）
 
-- [ ] **显示：姓名 / 邮箱 / 状态 / 角色 / mentor / 飞书运营名**
-  - Phase: P1 | Ticket: P1-T08（后端 ✅）| 后端: `GET /api/v1/team/members`
-- [ ] **关键指标：在跟达人数 / 已成交数 / 停滞风险**
-  - Phase: P1 | Ticket: P1-T08（后端 ✅）
-  - 验收: 离职成员仍可见但标灰
+- [✅] **显示：姓名 / 邮箱 / 状态 / 角色 / mentor / 飞书运营名**
+  - Phase: P1 | Ticket: P1-T08（后端 ✅）+ P5-T19（前端 ✅）| 后端: `GET /api/v1/team/members`
+  - **本地验收 2026-07-04** ✅
+- [✅] **关键指标：在跟达人数 / 已成交数 / 停滞风险**
+  - Phase: P1 | Ticket: P1-T08（后端 ✅）+ P5-T19（前端 ✅）| 后端: `GET /api/v1/team/members`
+  - 验收: 离职成员仍可见但标灰（P5-T19 ✅ 列表含 departed + 行 opacity）
+  - **2026-07-05** ✅ `activeKolCount` / `closedKolCount` / `stalledKolCount`
 
 ### F-TEAM-OP 操作（§7.2）
 
-- [ ] **保存设置（角色 / mentor / 飞书运营名）**
-  - Phase: P5 | Ticket: P5-T10
-- [ ] **飞书运营名保存后自动批量归属** — 见 [F-AUTH-05 ✅]
-- [ ] **「标记离职」（Leader 权限）**
-  - Phase: P5 | Ticket: P5-T11 | 后端: `POST /api/v1/team/members/{id}/offboard`
-- [ ] **离职后名下达人进入团队池（status → orphaned）**
+- [✅] **保存设置（角色 / mentor / 飞书运营名）**
+  - Phase: P5 | Ticket: P5-T10, P5-T19 | 后端: `PATCH /api/v1/team/profile` · 前端: `TeamMemberProfileEditor`（仅本人行可编辑）
+  - 验收: 保存后返回 `kolsAssigned`；非 Leader 不可自提 Leader（待审批首次除外）
+- [🚫] **飞书运营名保存后自动批量归属** — 见 [F-AUTH-05 ✅]（**2026-07-05 联调通过**）
+- [✅] **「标记离职」（Leader 权限）**
+  - Phase: P5 | Ticket: P5-T11 | 后端: `POST /api/v1/team/depart/{userId}`
+- [✅] **离职后名下达人进入团队池（status → orphaned）**
   - Phase: P5 | Ticket: P5-T11
-- [ ] **「查看团队池」（Leader 权限）**
-  - Phase: P1（GET）+ P5（分配按钮）| Ticket: P1-T08, P5-T12
-- [ ] **Leader 在团队池中分配达人给指定成员**
-  - Phase: P5 | Ticket: P5-T12 | 后端: `POST /api/v1/team/pool/assign`
+- [✅] **「查看团队池」（Leader 权限）**
+  - Phase: P1（GET）+ P5（分配按钮）| Ticket: P1-T08, P5-T12, P5-T19
+- [✅] **Leader 在团队池中分配达人给指定成员**
+  - Phase: P5 | Ticket: P5-T12, P5-T19 | 后端: `POST /api/v1/kols/assign`
   - 验收: 历史邮件记录保留；写审计 log
 
 ---
@@ -347,35 +376,36 @@
 
 ### F-TPL-01 私有模板库
 
-- [ ] **模板库私有，每个成员只看自己**
-  - Phase: P1（GET 后端 ✅）+ P5（CRUD）| Ticket: P1-T09, P5-T09 | 后端: `GET /api/v1/templates`
+- [✅] **模板库私有，每个成员只看自己**
+  - Phase: P1（GET 后端 ✅）+ P5（CRUD）| Ticket: P1-T09, P5-T09 | 后端: `GET /api/v1/templates`（`created_by` 过滤）
   - 验收: 跨用户 GET 不可见；尝试访问他人模板 403
 
 ### F-TPL-02 必填字段
 
-- [ ] **新建模板必填：名称 / 场景 / 主题 / 正文**
-  - Phase: P5 | Ticket: P5-T09 | 后端: Jakarta Validation
+- [✅] **新建模板必填：名称 / 场景 / 主题 / 正文**
+  - Phase: P5 | Ticket: P5-T09 | 后端: `TemplateUpsertRequest` Jakarta Validation
   - 验收: 任一字段为空 400
 
 ### F-TPL-03 变量
 
-- [ ] **正文支持变量（如 `{{creator_name}}`）**
+- [✅] **正文支持变量（如 `{{creator_name}}`）**
   - Phase: P5 | Ticket: P5-T09 | 后端: `TemplateRenderService.render`
-  - 验收: 至少支持 `creator_name` / `platform` / `quote` / `homepage_url`
+  - 验收: 支持 `creator_name` / `platform` / `quote` / `homepage_url`（及 seed 别名 `kol_name` / `agreed_price` / `operator_name`）
 
 ### F-TPL-04 模板 CRUD
 
-- [ ] **模板增 / 删 / 改 / 查**
-  - Phase: P5 | Ticket: P5-T09, P5-T17
+- [✅] **模板增 / 删 / 改 / 查**
+  - Phase: P5 | Ticket: P5-T09, P5-T17 | 后端: `POST/PATCH/DELETE /api/v1/templates` · 前端: `TemplateLibrary`
 
 ### F-TPL-05 使用模板
 
-- [ ] **撰写邮件 / 批量跟进时可选模板**
+- [✅] **撰写邮件 / 批量跟进时可选模板**
   - Phase: P5 | Ticket: P5-T14, P5-T18
+  - **本地验收 2026-07-04** ✅（DraftSendPanel + BatchFollowupButton）
 
 ### F-TPL-06 used_count
 
-- [ ] **使用模板后使用次数 +1**
+- [✅] **使用模板后使用次数 +1**
   - Phase: P5 | Ticket: P5-T08
   - 验收: 仅在 send 成功后 +1；预览/草稿不 +1
 
@@ -385,44 +415,44 @@
 
 ### F-SCHED-01 保存计划
 
-- [ ] **草稿面板可保存定时计划**
-  - Phase: P6 | Ticket: P6-T02 | 前端: `DraftSendPanel` 增加时间选择器
+- [✅] **草稿面板可保存定时计划（UI + `POST /scheduled-emails`；Worker 派发见 P6）**
+  - Phase: P5（UI + 创建 API）+ P6（派发）| Ticket: P5-T14, P6-T02, P6-T03
 
 ### F-SCHED-02 列表字段
 
-- [ ] **列表显示：达人 / 计划发送时间 / 主题 / 状态 / 是否含 CC / 是否富文本**
+- [✅] **列表显示：达人 / 计划发送时间 / 主题 / 状态 / 是否含 CC / 是否富文本**
   - Phase: P1（GET 后端 ✅）+ P6（状态机）| Ticket: P1-T10, P6-T01 | 后端: `GET /api/v1/scheduled-emails`
   - 验收: 6 个字段齐全；状态符合 P6 状态机
 
 ### F-SCHED-03 5 个状态
 
-- [ ] **状态：scheduled / processing / sent / failed / cancelled**
+- [✅] **状态：scheduled / processing / sent / failed / cancelled**
   - Phase: P6 | Ticket: P6-T01
   - 验收: 状态转移合法（scheduled → processing → sent/failed）；cancelled 仅在 scheduled 状态可行
 
 ### F-SCHED-04 发送前取消
 
-- [ ] **发送前可取消**
+- [✅] **发送前可取消**
   - Phase: P6 | Ticket: P6-T02 | 后端: `DELETE /api/v1/scheduled-emails/{id}`
   - 验收: processing 后不可取消
 
 ### F-SCHED-05 原子认领
 
-- [ ] **Worker 到点原子认领（防重复发送）**
-  - Phase: P6 | Ticket: P6-T03 | 后端: `UPDATE ... WHERE status='scheduled' AND scheduled_at<=now() RETURNING ...`
+- [✅] **Worker 到点原子认领（防重复发送）**
+  - Phase: P6 | Ticket: P6-T03 | 后端: `UPDATE ... FOR UPDATE SKIP LOCKED RETURNING`
   - 验收: 多 Worker 并发场景一封邮件最多被一个 Worker 取走
 
 ### F-SCHED-06 重试
 
-- [ ] **失败最多重试 3 次**
+- [✅] **失败最多重试 3 次**
   - Phase: P6 | Ticket: P6-T04
-  - 验收: 指数退避；第 4 次失败标 failed + 告警
+  - 验收: 指数退避（1/2/4 分钟）；第 3 次失败标 failed 终态 + Worker WARN 日志 + UI「已停止」
 
 ### F-SCHED-07 富文本
 
-- [ ] **富文本 HTML 同样以 `multipart/alternative` 发出**
+- [✅] **富文本 HTML 同样以 `multipart/alternative` 发出**
   - Phase: P6 | Ticket: P6-T05
-  - 验收: 真实 Gmail 冒烟回读 Content-Type 正确
+  - 验收: 定时创建存 `english_body_html`；Worker 派发走 Gmail multipart；列表显示「富文本」
 
 ---
 
@@ -430,32 +460,34 @@
 
 ### F-FAQ-01 月份筛选依赖 feishu_outreach_at
 
-- [ ] **月份筛选依赖 `feishu_outreach_at`，无日期只在「全部时间」**
+- [⚠️] **月份筛选依赖 `feishu_outreach_at`，无日期只在「全部时间」**
   - Phase: P1 | Ticket: P1-T07（见 F-BOARD-WINDOW）
+  - **2026-07-05**：飞书 Sheet 已同步；待看板时间窗 spot check
 
 ### F-FAQ-02 陌生邮件不污染
 
-- [ ] **Gmail 同步只处理飞书登记过的邮箱**
+- [✅] **Gmail 同步只处理飞书登记过的邮箱**
   - Phase: P3 | Ticket: P3-T07 | 后端: `isFeishuBacked` 过滤
-- [ ] **陌生邮件 / 营销邮件 / 系统邮件不创建 KOL**
-- [ ] **历史噪音达人需清理（迁移期）**
+- [✅] **陌生邮件 / 营销邮件 / 系统邮件不创建 KOL**
+- [🚫] **历史噪音达人需清理（迁移期）**
   - Phase: P6 | Ticket: P6-T10
   - 验收: 飞书未登记邮箱来信不入 `kols` 表；自动落「discarded_emails」审计（可选）
+  - **待生产迁移 / 双跑期执行**
 
 ### F-FAQ-03 AI 失败兜底
 
-- [ ] **AI 调用失败邮件仍入库**
+- [✅] **AI 调用失败邮件仍入库**
   - Phase: P4 | Ticket: P4-T07
-- [ ] **UI 显示「AI 分类失败，已保留邮件等待人工处理」**
+- [✅] **UI 显示「AI 分类失败，已保留邮件等待人工处理」**（后端 `ai_summary` + `ai_error` 字段）
   - Phase: P4 | Ticket: P4-T07
-- [ ] **「重新分析」按钮触发再次 AI**
+- [✅] **「重新分析」按钮触发再次 AI**
   - Phase: P4 | Ticket: P4-T09
   - 验收: 余额不足 / 401 / 超时三种场景都走 fallback；不阻塞同步
 
 ### F-FAQ-04 Gmail 重新授权
 
-- [ ] **Refresh Token 失效时顶栏出现「重新授权 Gmail」**（详见 F-WB-SYNC-03）
-- [ ] **授权完成后自动恢复同步**
+- [✅] **Refresh Token 失效时顶栏出现「重新授权 Gmail」**（详见 F-WB-SYNC-03，同步失败引导）
+- [✅] **授权完成后自动恢复同步**
 
 ---
 

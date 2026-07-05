@@ -178,7 +178,7 @@
 
 **对策：**
 
-- 密钥统一走 Secrets Manager / Vault，不入 git
+- 密钥统一走 Secrets Manager / Vault，不入 git — 见 [`deploy/secrets/README.md`](../../../kol-mail-desk-v2-backend/deploy/secrets/README.md)（P6-T13）
 - 日志禁止打印任何密钥（CI 自动检测 `grep -r 'sk-' src/`）
 - 定期轮换（季度）
 - 离职流程包括撤销访问

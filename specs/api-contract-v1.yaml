@@ -1031,6 +1031,9 @@ components:
         replyResolved:
           type: boolean
           description: 手动「无需回复」覆盖标记
+        stageOverride:
+          type: boolean
+          description: 阶段已人工校准；为 true 时飞书同步不覆盖 stage
         createdAt:
           type: string
           format: date-time
@@ -1254,6 +1257,15 @@ components:
             ownedKolCount:
               type: integer
               description: 名下达人数量
+            activeKolCount:
+              type: integer
+              description: 在跟达人数（status=active）
+            closedKolCount:
+              type: integer
+              description: 已成交达人数（status=closed）
+            stalledKolCount:
+              type: integer
+              description: 停滞风险达人数（末次 inbound 3 天未回复）
     TeamMembersResponse:
       type: object
       description: 团队成员 + 团队池
@@ -1323,24 +1335,24 @@ components:
     # ---------- 看板 ----------
     BoardKpi:
       type: object
-      description: 看板核心指标
+      description: 看板核心指标（v3.3 §5.1）
       properties:
         totalKols:
           type: integer
-          description: 达人总数
-        activeKols:
+          description: 当前时间窗内达人总数
+        unrepliedKols:
           type: integer
-          description: 进行中达人数
-        publishedKols:
+          description: 待回复 / 停滞达人数（最新动作为 inbound 且未标记无需回复）
+        unreadEmails:
           type: integer
-          description: 已发布数
-        paidKols:
+          description: 未读 inbound 邮件数
+        cooperationKols:
           type: integer
-          description: 已付款数
+          description: 进入合作达人数（确认合作及之后阶段快照合计）
         conversionRate:
           type: number
           format: float
-          description: 转化率（已付款 / 总数）
+          description: 转化率（付款阶段累计 / 触达阶段累计）
     BoardFunnelStage:
       type: object
       description: 漏斗单阶段（累计：本阶段及以后人数）

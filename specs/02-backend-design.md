@@ -120,7 +120,7 @@ UPDATE 路径不修改 is_read
 
 1. `messages.get(format=full)` × 并发 4
 2. 已存在的 `gmail_message_id` 批量跳过 AI
-3. 调 `AiService.classifyEmail`
+3. 调 `AiService.classifyEmail`（轻量分类，**不含全文翻译**，见 §2.8 成本设计）
 4. `persistGmailSync`：飞书达人过滤后 upsert
 5. 更新游标：每页更新 `last_synced_at`；全部分页完成才更新 `last_synced_history_id`
 
@@ -193,23 +193,41 @@ Cron 每 1 分钟扫描（替代旧版每天一次）。
 
 ### 2.8 AiService（详见 04 阶段）
 
-四个能力：
+四个能力，均通过 **`AiModelRouter`** 按能力解析供应商（Moonshot / DeepSeek，配置驱动，见 ADR-007）：
 
-| 方法 | 模型 | 备注 |
-|------|------|------|
-| `classifyEmail` | moonshot-v1-8k | JSON schema 输出 |
-| `generateReplyDraft` | moonshot-v1-128k | 中英双版 |
+| 方法 | 默认模型（provider=moonshot） | 备注 |
+|------|------------------------------|------|
+| `classifyEmail` | moonshot-v1-8k | JSON schema 输出，**不含邮件全文翻译**（见下方「成本设计」） |
+| `generateReplyDraft` | moonshot-v1-128k | 中英双版，需要完整历史上下文 |
 | `checkDraft` | moonshot-v1-8k | 发送前自检 |
-| `translateText` | moonshot-v1-128k | 中英互译 |
+| `translateText` | moonshot-v1-8k（默认）/ 32k（超长时升级） | 中英互译，**按需触发，非同步时自动生成** |
 
-Prompt 从旧 `lib/ai/prompts.ts` 迁入 `resources/prompts/*.st`。
+Prompt 从旧 `lib/ai/prompts.ts` 迁入 `resources/prompts/*.st`，两家供应商共用同一份 Prompt（协议均为 OpenAI 兼容 `response_format: json_object`）。
 
-降级（无 API Key 或 API 调用失败）：
+降级链路（三级，见 ADR-007）：
 
-- `classify` → 正则 heuristic
-- `draft` → 模板化 fallback
-- `translate` → 提示「未配置」
-- `check` → 返回空 issues
+1. 主供应商调用失败（401 / 429 / 超时 / 余额不足）→ 自动重试该能力配置的 `fallback-provider`
+2. 备用供应商也失败 → 走本地 heuristic 兜底：
+   - `classify` → 正则 heuristic
+   - `draft` → 模板化 fallback
+   - `translate` → 提示「未配置」
+   - `check` → 返回空 issues
+
+#### 供应商设计（ADR-007）
+
+- 支持 **Moonshot（Kimi）+ DeepSeek** 双供应商，均为 OpenAI 兼容协议，复用同一个 `spring-ai-openai` 客户端，不需要额外依赖。
+- 切换供应商只需改 `application.yml` 的 `maildesk.ai.default-provider`（或单个能力的 `provider`）+ 环境变量里配好对应 `*_API_KEY`，**无需改代码、无需重新编译**。
+- DeepSeek 用新模型 ID `deepseek-v4-flash` / `deepseek-v4-pro`（`deepseek-chat`/`deepseek-reasoner` 别名 2026-07-24 停用）；接入时需显式关闭「思考模式」避免分类/翻译这类低延迟任务被思考过程拉高成本和延迟。
+- 详细配置结构、能力×模型映射表、不做的事情见 [`ADR-007`](./decisions/ADR-007-ai-multi-provider.md)。
+
+#### 成本设计（Phase 4 讨论结论，落地时必须遵守）
+
+1. **`classifyEmail` 去掉 `body_zh` 字段**：旧版 schema 里 `classifyEmail` 会在 Gmail 同步时对每封新邮件都输出全文中文翻译，属于「无论用户是否会看都强制翻译」的浪费。新版 `classifyEmail` 只保留 `stage_signal`（参考用，不驱动阶段）/ `priority` / `summary` / `extracted` / `suggested_action`，**移除 `body_zh`**。同步阶段调用量不变，但单次输出 token 大幅下降。
+2. **邮件正文中译改为按需触发，不做懒加载缓存新开发**：复用旧版 `EmailBodyViewer` 组件已有的「翻译成中文」按钮交互（`target=zh, mode=email_body`），用户点击时才调 `POST /api/v1/ai/translate`；不新增任何懒加载/预取机制。浏览器自带翻译功能不能替代此按钮（无法保留价格/日期/链接的忠实翻译语义，且是应用内交互而非浏览器插件依赖），故仍需保留该按需接口。
+3. **翻译不引入第三方专用机器翻译 API（百度/有道等）**：按 2026-07 实际报价核算，`moonshot-v1-8k`（¥12/百万 token，输入输出同价）在邮件长度量级下（约 1500~2000 字符）单次成本 ≈ ¥0.02，低于百度/有道通用文本翻译 API（¥48~49/百万**字符**，约 ¥0.08~0.09/封）。原因是英文输入经 BPE 分词压缩比高（约 4 字符/token），弥补了中文输出压缩比较低的劣势。额外收益：不新增第三方凭证类型、独立限流/降级/审计路径，符合 ADR-004「单后端栈」原则。若未来实测调用量远超预期，需用 `ai_usage_log`（P4-T10）真实数据重新核算，而非仅凭本估算。
+4. **翻译类任务（输出 token 量级 ≈ 或大于输入）优先用 `v1-8k`/`v1-32k`，不用新款 `kimi-k2.x` 系列**：`k2.x` 系列输入更便宜但输出单价明显更高（约 ¥20~27/百万 token vs `v1` 系列的 ¥12/百万 token 统一价），翻译这种「输出主导型」任务用 `v1` 系列反而更省；`k2.x` 更适合长上下文输入、短输出的任务（如分类、摘要）。`generateReplyDraft` 因需要完整历史上下文，仍按需升级到 `128k`。
+5. **outbound（我方发出）邮件是否需要完整 AI 分类留待 P4-T03 实现时再评估**，本次讨论未做定论，不写死在设计里。
+6. **上述 3/4 条的成本结论仅覆盖 Moonshot 内部对比**；引入 DeepSeek（ADR-007）后，`deepseek-v4-flash` 输出单价 ¥2/百万 token（约为 `moonshot-v1-8k` 的 1/6），翻译/分类这类调用量大的能力理论上更省，但**默认 provider 仍先用 moonshot**，待人工抽样验证 DeepSeek 输出质量（分类准确度、翻译忠实度）达标后再考虑切换默认值，不能只看价格。
 
 ## 三、REST API 设计
 
@@ -328,6 +346,7 @@ CREATE TABLE ai_usage_log (
   tenant_id UUID NOT NULL,
   user_id UUID,
   capability TEXT NOT NULL,
+  provider TEXT NOT NULL,       -- 'moonshot' / 'deepseek'（ADR-007 多供应商路由）
   model TEXT,
   prompt_tokens INT,
   completion_tokens INT,
@@ -398,7 +417,7 @@ idx_kols_feishu_operator_name (feishu_operator_name)
 
 | Job | 频率 | 说明 |
 |-----|------|------|
-| `GmailIncrementalSyncJob` | 每 2～5 分钟 | 按 `last_synced_at` 排序取 N 个用户 |
+| `GmailIncrementalSyncJob` | 每 5 分钟 | 按 `last_synced_at` 排序取 N 个用户 |
 | `GmailHistorySyncJob` | 用户触发 | 多页任务入队，串行/并发消费 |
 | `FeishuDeltaSyncJob` | 每 30 分钟 | 小批量 50 条 |
 | `ScheduledEmailDispatchJob` | 每分钟 | 原子认领、最多 3 次重试 |
