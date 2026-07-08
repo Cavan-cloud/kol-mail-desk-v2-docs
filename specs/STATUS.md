@@ -9,8 +9,8 @@
 
 | 字段 | 值 |
 |------|-----|
-| 最后更新 | 2026-07-05（B 类缺口 P0–P2 开发完成） |
-| 更新者 | Agent — parity 验收文档同步（2026-07-05 本地） |
+| 最后更新 | 2026-07-08（Phase 7B 完成 · P7B-T12~T14 月份 chip / 布局壳 / E2E） |
+| 更新者 | Agent — 看板 v1 parity Phase 7B |
 | Git 提交 | 三仓库首次 commit 已完成并推送到 `github.com/Cavan-cloud/kol-mail-desk-v2-{backend,web,docs}` main 分支 |
 | 项目相对天数 | D0（计划期） |
 | 工作模式 | **multi-root workspace**：`~/code/maildesk-v2.code-workspace`（已创建） |
@@ -19,11 +19,32 @@
 
 ## 当前 Phase
 
-**Phase 6 — 定时邮件 + 生产化（13/13）✅**
+**Phase 7B — 看板 v1 Parity 补全（14/14）✅ 已完成**
 
-Phase 0～5 已完成。详见 [`04-phases.md` § Phase 6](./04-phases.md) · [`BACKLOG.md` § P6](./BACKLOG.md#phase-6--定时邮件--生产化2-周)。
+Phase 0～6 已完成。详见 [`BACKLOG.md` § Phase 7B](./BACKLOG.md#phase-7b--看板-v1-parity-补全22-25-周)。
 
-### Phase 6 完成度
+### Phase 7B 完成度
+
+| Ticket | 描述 | 状态 |
+|--------|------|------|
+| P7B-T01 | KPI 改名「待回复」+ 口径文档对齐 | ✅ |
+| P7B-T02 | 看板 API：成员视角 + 含实习生 rollup | ✅ |
+| P7B-T03 | 看板 UI：视角栏 + 含实习生开关 | ✅ |
+| P7B-T04 | 看板 API：达人明细列表（下钻数据源） | ✅ |
+| P7B-T05 | KPI 可点击 + `detail` 路由状态 | ✅ |
+| P7B-T06 | 下钻达人列表 UI + 跳转工作台 | ✅ |
+| P7B-T07 | Pipeline 阶段点击 → 下钻联动 | ✅ |
+| P7B-T08 | 看板 API：成员进度行 | ✅ |
+| P7B-T09 | 成员进度 UI（Members 区块） | ✅ |
+| P7B-T10 | 平台分布（环形图 + 列表） | ✅ |
+| P7B-T11 | 最近邮件动态（16 条 + 跳工作台） | ✅ |
+| P7B-T12 | 时间窗：历史月份快捷 chip | ✅ |
+| P7B-T13 | 看板两栏布局壳 | ✅ |
+| P7B-T14 | E2E + feature-parity / BACKLOG 回填 | ✅ |
+
+完成进度：**14 / 14 = 100%**
+
+### Phase 6 完成度（已完成）
 
 | Ticket | 描述 | 状态 |
 |--------|------|------|
@@ -179,10 +200,7 @@ Phase 0～5 已完成。详见 [`04-phases.md` § Phase 6](./04-phases.md) · [`
 
 ## 当前活跃 ticket
 
-**无 — B 类缺口（P0–P2）已开发，待本地复验**
-
-> 2026-07-05 完成：onboarding mentor · 登录页 Gmail 文案 · 看板 KPI/月份 · 达人合作状态 · 团队三指标 · 侧栏「未读」替代「高优先级」（产品确认）  
-> 下一步：staging 部署 + C/D 类切流 drill
+**无 — Phase 7B 已完成，等待人工挑选 Phase 8 ticket**
 
 ---
 
@@ -234,14 +252,15 @@ Phase 0～5 已完成。详见 [`04-phases.md` § Phase 6](./04-phases.md) · [`
 | **Phase 4 — Spring AI** | 2026-07-01 | 10/10 ticket 全完成；多供应商 AI + Gmail 同步分类 + 重新分析 + ai_usage_log |
 | **Phase 5 — 写操作与发信** | 2026-07-03 | 20/20 ticket 全完成；写 API + 前端接线 + Gmail 冒烟 runbook |
 | **Phase 6 — 定时邮件 + 生产化** | 2026-07-03 | 13/13 ticket 全完成；Worker 派发 · Docker/Helm · 可观测性 · 迁移 · 切流/回滚 · External Secrets |
+| **Phase 7B — 看板 v1 Parity 补全** | 2026-07-08 | 14/14 ticket 全完成；视角 / 下钻 / 成员进度 / 平台分布 / 邮件动态 / 月份 chip / Playwright @smoke |
 
 ---
 
 ## 下一个 Phase 入口
 
-**Phase 6 — 定时邮件 + 生产化** — **13/13 完成** 🎉 Phase 7 可选。
+**Phase 8 — SaaS 增强** — 待启动 ⬜
 
-> Phase 4 全部完成（P4-T01～T10 ✅）。
+> Phase 7B 全部完成（P7B-T01～T14 ✅）。详见 [`BACKLOG.md` § Phase 8](./BACKLOG.md#phase-8--saas-增强可选46-周)。
 
 ---
 

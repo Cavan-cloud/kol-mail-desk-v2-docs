@@ -440,22 +440,168 @@
 
 ---
 
-## Phase 7 — SaaS 增强（可选，4～6 周）
+## Phase 7B — 看板 v1 Parity 补全（2～2.5 周）
+
+> v1 看板可下钻 / 成员进度 / 平台分布 / 邮件动态等能力补回 v2。不含工作台侧栏「高优先级」（产品已用「未读」替代）。  
+> 「停滞（≥3 天）」口径仅保留在团队页 `stalledKolCount`，看板 KPI 统一为「待回复」。
+
+### 概览
+
+| Ticket | 标题 | 模块 | 依赖 | 预估 | 状态 |
+|--------|------|------|------|------|------|
+| P7B-T01 | KPI 改名「待回复」+ 口径文档对齐 | docs + web | — | 0.25d | ✅ |
+| P7B-T02 | 看板 API：成员视角 + 含实习生 rollup | backend + OpenAPI | — | 1.5d | ✅ |
+| P7B-T03 | 看板 UI：视角栏 + 含实习生开关 | web | P7B-T02 | 0.5d | ✅ |
+| P7B-T04 | 看板 API：达人明细列表（下钻数据源） | backend + OpenAPI | P7B-T02 | 2d | ✅ |
+| P7B-T05 | KPI 可点击 + `detail` 路由状态 | web | P7B-T04 | 0.5d | ✅ |
+| P7B-T06 | 下钻达人列表 UI + 跳转工作台 | web | P7B-T04, P7B-T05 | 1d | ✅ |
+| P7B-T07 | Pipeline 阶段点击 → 下钻联动 | web | P7B-T05, P7B-T06 | 0.5d | ✅ |
+| P7B-T08 | 看板 API：成员进度行 | backend + OpenAPI | P7B-T02, P7B-T04 | 1.5d | ✅ |
+| P7B-T09 | 成员进度 UI（Members 区块） | web | P7B-T08 | 1d | ✅ |
+| P7B-T10 | 平台分布（环形图 + 列表） | web + OpenAPI | P7B-T04 | 0.75d | ✅ |
+| P7B-T11 | 最近邮件动态（16 条 + 跳工作台） | web + OpenAPI | P7B-T04 | 0.75d | ✅ |
+| P7B-T12 | 时间窗：历史月份快捷 chip | backend + web | P7B-T02 | 0.5d | ✅ |
+| P7B-T13 | 看板两栏布局壳 | web | P7B-T09~T11 | 0.5d | ✅ |
+| P7B-T14 | E2E + feature-parity / BACKLOG 回填 | web + docs | P7B-T01~T13 | 1d | ✅ |
+
+**Phase 7B 合计：~12.25 人日**
+
+### 详细
+
+#### P7B-T01 — KPI 改名「待回复」
+
+- **模块**: `kol-mail-desk-v2-docs/specs/api-contract-v1.yaml` · `kol-mail-desk-v2-web/components/pages/BoardPage.tsx`
+- **Feature**: `F-BOARD-KPI`
+- **DoD**:
+  - 看板 KPI 标签改为 **「待回复」**（去掉「/ 停滞」）
+  - OpenAPI `BoardKpi.unrepliedKols` 描述对齐口径（非 3 天停滞）
+  - `05-feature-parity.md` 同步
+  - **不改** `BoardApplicationService.needsReply` 统计逻辑
+
+#### P7B-T02 — 看板 API：成员视角 + 含实习生
+
+- **模块**: `maildesk-application/.../board/` · `api-contract-v1.yaml`
+- **Feature**: `F-BOARD-SCOPE`
+- **依赖**: —
+- **DoD**:
+  - `GET /api/v1/board` 新增 `owner`（UUID 可选）、`includeInterns`（boolean，默认 true）
+  - KPI / funnel / stageDistribution 随 scope 变化
+  - 实习生 rollup 逻辑对齐 v1 `board-data.ts`
+  - 单元测试 + OpenAPI 更新
+
+#### P7B-T03 — 看板 UI：视角栏
+
+- **模块**: `components/pages/BoardPage.tsx`
+- **Feature**: `F-BOARD-SCOPE`
+- **依赖**: P7B-T02
+- **DoD**:
+  - 顶栏「视角」：全部成员 + 各成员（显示名 + 角色）
+  - 「含实习生 / 不含实习生」toggle；URL 持久化
+
+#### P7B-T04 — 看板 API：达人明细列表
+
+- **模块**: `BoardApplicationService` · OpenAPI
+- **Feature**: `F-BOARD-DRILL`
+- **依赖**: P7B-T02
+- **DoD**:
+  - 扩展 board 响应或新增 `GET /api/v1/board/kols`（契约定案）
+  - 返回 scope + window 下达人列表（含 latestEmail 摘要字段）
+  - 支持 `detail=kols|unreplied|unread` + 可选 `stage` 预筛
+  - `detail=unreplied` 条数与 KPI `unrepliedKols` 一致
+
+#### P7B-T05 — KPI 可点击 + detail 状态
+
+- **Feature**: `F-BOARD-DRILL`
+- **依赖**: P7B-T04
+- **DoD**:
+  - 总达人 / 待回复 / 未读邮件 KPI 可点击；选中高亮
+  - URL `detail=kols|unreplied|unread`；「进入合作」不可点
+
+#### P7B-T06 — 下钻达人列表 UI
+
+- **Feature**: `F-BOARD-DRILL`
+- **依赖**: P7B-T04, P7B-T05
+- **DoD**:
+  - 底部列表：姓名 / 邮箱 / 平台 / AI 摘要 / 优先级
+  - 标题「待回复达人 · N」等；点击 → 工作台对应达人
+
+#### P7B-T07 — Pipeline 阶段下钻
+
+- **Feature**: `F-BOARD-DRILL` · `F-BOARD-PIPELINE`
+- **依赖**: P7B-T05, P7B-T06
+- **DoD**:
+  - `BoardPipelinePanel` 链接 `detail=kols&stage={stage}` 可用
+  - 列表标题「{阶段名} · 达人列表」
+
+#### P7B-T08 — 看板 API：成员进度行
+
+- **Feature**: `F-BOARD-MEMBERS`
+- **依赖**: P7B-T02, P7B-T04
+- **DoD**:
+  - 响应 `members[]`：未读 / 待回复 / 总数 / stageCounts / coveredMemberIds
+  - 成员行 `unreplied` = 待回复口径（非 stalled）
+
+#### P7B-T09 — 成员进度 UI
+
+- **Feature**: `F-BOARD-MEMBERS`
+- **依赖**: P7B-T08
+- **DoD**:
+  - 「成员进度 / 成员明细」卡片 + 阶段分布条（迁 v1 StageBar）
+
+#### P7B-T10 — 平台分布
+
+- **Feature**: `F-BOARD-COMPOSITION`
+- **依赖**: P7B-T04
+- **DoD**:
+  - 右侧 Donut + 平台列表；随 scope + window 变化
+
+#### P7B-T11 — 最近邮件动态
+
+- **Feature**: `F-BOARD-ACTIVITY`
+- **依赖**: P7B-T04
+- **DoD**:
+  - 最近 16 条邮件动态；点击 → 工作台
+
+#### P7B-T12 — 历史月份快捷 chip
+
+- **Feature**: `F-BOARD-WINDOW`
+- **依赖**: P7B-T02
+- **DoD**:
+  - 后端 `availableMonths[]`；时间栏最多 6 个 yyyy-MM 快捷 chip
+
+#### P7B-T13 — 两栏布局壳
+
+- **依赖**: P7B-T09~T11
+- **DoD**:
+  - 左：Pipeline + Members；右：平台 + 动态；下钻列表全宽底部
+
+#### P7B-T14 — E2E + 文档回填
+
+- **依赖**: P7B-T01~T13
+- **DoD**:
+  - Playwright：KPI 下钻 / Pipeline 点击 / 视角切换
+  - `05-feature-parity.md` · `STATUS.md` Phase 7B 完成度
+
+---
+
+## Phase 8 — SaaS 增强（可选，4～6 周）
+
+> 原 Phase 7，因看板 Parity 插入 Phase 7B 而顺延编号。
 
 ### 概览
 
 | Ticket | 标题 | 模块 | 预估 |
 |--------|------|------|------|
-| P7-T01 | Gmail Push（Pub/Sub）+ Webhook 近实时同步 | integration/gmail + worker | 3d |
-| P7-T02 | Gmail Watch 续订 Job（每天） | worker | 1d |
-| P7-T03 | 全链路 `tenant_id` 验证 + RLS 启用 | infrastructure | 2d |
-| P7-T04 | 平台管理后台（租户管理 / 配额 / 用量报表） | api + web | 5d |
-| P7-T05 | 租户 onboarding 流程（邀请 → 创建租户 → 初始化 owner） | application + web | 3d |
-| P7-T06 | OpenSearch 集成 + 全文搜索（达人 / 邮件 / AI 摘要） | infrastructure + api | 4d |
-| P7-T07 | SSO（SAML / OIDC） | api | 4d |
-| P7-T08 | Stripe 计费（可选） | api + web | 5d |
+| P8-T01 | Gmail Push（Pub/Sub）+ Webhook 近实时同步 | integration/gmail + worker | 3d |
+| P8-T02 | Gmail Watch 续订 Job（每天） | worker | 1d |
+| P8-T03 | 全链路 `tenant_id` 验证 + RLS 启用 | infrastructure | 2d |
+| P8-T04 | 平台管理后台（租户管理 / 配额 / 用量报表） | api + web | 5d |
+| P8-T05 | 租户 onboarding 流程（邀请 → 创建租户 → 初始化 owner） | application + web | 3d |
+| P8-T06 | OpenSearch 集成 + 全文搜索（达人 / 邮件 / AI 摘要） | infrastructure + api | 4d |
+| P8-T07 | SSO（SAML / OIDC） | api | 4d |
+| P8-T08 | Stripe 计费（可选） | api + web | 5d |
 
-**Phase 7 合计：~27 人日（可选范围）**
+**Phase 8 合计：~27 人日（可选范围）**
 
 ---
 
@@ -474,8 +620,9 @@
 | P4 | 10 | 0 | 0 | 10 | 0% |
 | P5 | 20 | 0 | 0 | 20 | 0% |
 | P6 | 13 | 0 | 0 | 13 | 0% |
-| P7 | 8 | 0 | 0 | 8 | 0% |
-| **总计** | **99** | **20** | **0** | **79** | **20%** |
+| P7B | 14 | 2 | 0 | 12 | 14% |
+| P8 | 8 | 0 | 0 | 8 | 0% |
+| **总计** | **113** | **20** | **1** | **92** | **18%** |
 
 ---
 

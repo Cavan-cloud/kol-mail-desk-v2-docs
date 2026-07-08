@@ -275,8 +275,8 @@
 
 - [✅] **总达人（当前时间窗内）**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）| 后端: `GET /api/v1/board?window=...`
-- [✅] **待回复 / 停滞数**
-  - Phase: P1 | Ticket: P1-T07（后端 ✅）
+- [✅] **待回复数**（P7B-T01 标签改为「待回复」；口径仍为最新 inbound 未回复，非 3 天停滞）
+  - Phase: P1 / P7B | Ticket: P1-T07（后端 ✅）+ P7B-T01（标签 ✅）
 - [✅] **未读邮件（inbound + is_read=false，当前时间窗）**
   - Phase: P1 | Ticket: P1-T07（后端 ✅）
 - [✅] **进入合作数 / 转化率（confirmed 及之后阶段达人数 + 比例）**
@@ -313,6 +313,41 @@
   - Phase: P1 | Ticket: P1-T07
   - 验收: 比率口径与旧系统逐字一致；E2E 截图回归
   - **本地验收 2026-07-04** ✅（漏斗/快照切换）
+
+### F-BOARD-SCOPE 成员视角（§5，v1 parity）
+
+- [✅] **视角切换：全部成员 / 指定成员 + 含实习生 toggle**
+  - Phase: P7B | Ticket: P7B-T02（API ✅）+ P7B-T03（UI ✅）
+  - 验收: KPI / 漏斗随 owner 变化；实习生 rollup 与 v1 一致
+
+### F-BOARD-DRILL KPI / Pipeline 下钻（§5，v1 parity）
+
+- [✅] **KPI 可点击 → 底部达人列表 → 跳转工作台**
+  - Phase: P7B | Ticket: P7B-T04 ✅ · P7B-T05 ✅ · P7B-T06 ✅ · P7B-T07 ✅
+  - 验收: `detail=unreplied` 条数 = KPI 待回复；Pipeline 阶段链可用
+
+### F-BOARD-MEMBERS 成员进度（§5，v1 parity）
+
+- [✅] **成员卡片：未读 / 待回复 / 总数 + 阶段分布条**
+  - Phase: P7B | Ticket: P7B-T08 ✅ · P7B-T09 ✅
+  - 验收: 成员行 `unreplied` = 待回复口径；随 scope + window 变化
+
+### F-BOARD-COMPOSITION 平台分布（§5，v1 parity）
+
+- [✅] **平台 Donut + 列表**
+  - Phase: P7B | Ticket: P7B-T10 ✅
+  - 验收: 随 scope + window 变化
+
+### F-BOARD-ACTIVITY 最近邮件动态（§5，v1 parity）
+
+- [✅] **最近 16 条邮件动态 + 跳工作台**
+  - Phase: P7B | Ticket: P7B-T11 ✅
+
+### F-BOARD-WINDOW-MONTHS 历史月份 chip（§5，v1 parity）
+
+- [✅] **`availableMonths` 快捷 chip（最多 6 个）**
+  - Phase: P7B | Ticket: P7B-T12 ✅
+  - 备注: 基础月份选择器 P1-T07 ✅；后端 `BoardSummary.availableMonths[]` + 时间栏 chip
 
 ---
 
