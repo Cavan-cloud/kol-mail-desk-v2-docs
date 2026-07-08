@@ -2,3 +2,7 @@
 .idea/
 .vscode/
 *.swp
+
+# Local deployment credentials — never commit
+deploy/*.credentials.local.md
+*.credentials.local.md
