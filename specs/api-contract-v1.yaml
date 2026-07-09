@@ -1062,7 +1062,15 @@ components:
         agreedPrice:
           type: number
           nullable: true
-          description: 约定价格
+          description: 约定价格（优先最终合作价格，否则解析品牌报价）
+        brandQuote:
+          type: string
+          nullable: true
+          description: 品牌报价（飞书 品牌报价 栏原文）
+        finalCooperationPrice:
+          type: number
+          nullable: true
+          description: 最终合作价格（飞书 最终合作价格 栏）
         agreedDeadline:
           type: string
           format: date
@@ -1610,7 +1618,7 @@ components:
           description: 标记已读 / 未读
     TeamProfileUpdateRequest:
       type: object
-      required: [displayName, role]
+      required: [displayName, role, feishuOperatorName]
       properties:
         displayName:
           type: string
@@ -1623,8 +1631,7 @@ components:
           nullable: true
         feishuOperatorName:
           type: string
-          nullable: true
-          description: 飞书运营名（保存后批量归属未分配达人）
+          description: 飞书运营名（必填，需与自建联表格运营名一致；保存后批量归属未分配达人）
     TeamProfileUpdateResponse:
       type: object
       required: [profile, kolsAssigned]

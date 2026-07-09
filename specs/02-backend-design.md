@@ -80,7 +80,9 @@ UPDATE 路径不修改 is_read
 | `主平台` | `primary_platform` |
 | `频道类型` | `type` |
 | `运营` | `feishu_operator_name` |
-| `报价` / `最终合作价格` / `品牌报价` / `KOL报价($)` | `agreed_price`（按优先级） |
+| `品牌报价` / `KOL报价($)` / `报价` | `brand_quote` |
+| `最终合作价格` | `final_cooperation_price` |
+| （派生） | `agreed_price` = 最终合作价格优先，否则解析品牌报价 |
 | `状态` | 经 `mapFeishuStage()` 映射到 `kol_stage` |
 | `建联时间` 等 | `feishu_outreach_at`（多源解析） |
 
@@ -121,6 +123,7 @@ UPDATE 路径不修改 is_read
 1. `messages.get(format=full)` × 并发 4
 2. 已存在的 `gmail_message_id` 批量跳过 AI
 3. 调 `AiService.classifyEmail`（轻量分类，**不含全文翻译**，见 §2.8 成本设计）
+   - 可通过 `maildesk.gmail.ai-classification-enabled=false`（或环境变量 `GMAIL_AI_CLASSIFICATION_ENABLED=false`）关闭同步期 LLM 分类，改为仅按 inbound/outbound 方向填充轻量元数据；**待回复口径**仍由 `needsReply = direction == INBOUND && reply_resolved == false` 决定，不依赖 AI。手动「重新分析」接口仍可按需调用 LLM。
 4. `persistGmailSync`：飞书达人过滤后 upsert
 5. 更新游标：每页更新 `last_synced_at`；全部分页完成才更新 `last_synced_history_id`
 
