@@ -203,7 +203,7 @@ Cron 每 1 分钟扫描（替代旧版每天一次）。
 | `classifyEmail` | moonshot-v1-8k | JSON schema 输出，**不含邮件全文翻译**（见下方「成本设计」） |
 | `generateReplyDraft` | moonshot-v1-128k | 中英双版，需要完整历史上下文 |
 | `checkDraft` | moonshot-v1-8k | 发送前自检 |
-| `translateText` | moonshot-v1-8k（默认）/ 32k（超长时升级） | 中英互译，**按需触发，非同步时自动生成** |
+| `translateText` | moonshot-v1-8k（默认）/ 32k（超长时升级） | 中英互译 + 中→韩（`targetLang=ko`），**按需触发，非同步时自动生成** |
 
 Prompt 从旧 `lib/ai/prompts.ts` 迁入 `resources/prompts/*.st`，两家供应商共用同一份 Prompt（协议均为 OpenAI 兼容 `response_format: json_object`）。
 

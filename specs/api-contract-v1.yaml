@@ -794,7 +794,7 @@ paths:
   /api/v1/ai/translate:
     post:
       tags: [ai]
-      summary: 中英互译
+      summary: 文本翻译（中↔英 / 中→韩）
       operationId: aiTranslate
       requestBody:
         required: true
@@ -1922,10 +1922,11 @@ components:
           type: string
         targetLang:
           type: string
-          description: 目标语言
+          description: 目标语言（zh 邮件正文中译；en/ko 中文编辑稿→最终确认稿）
           enum:
             - zh
             - en
+            - ko
           default: zh
     AiTranslateResult:
       type: object
@@ -1938,6 +1939,7 @@ components:
           enum:
             - zh
             - en
+            - ko
         fallback:
           type: boolean
 
