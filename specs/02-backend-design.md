@@ -80,8 +80,8 @@ UPDATE 路径不修改 is_read
 | `主平台` | `primary_platform` |
 | `频道类型` | `type` |
 | `运营` | `feishu_operator_name` |
-| `品牌报价` / `KOL报价($)` / `报价` | `brand_quote` |
-| `最终合作价格` | `final_cooperation_price` |
+| `品牌报价`（空则回退 `KOL报价($)` / `合作报价($)` / `报价`） | `brand_quote` |
+| `最终合作价格` / `最终报价` | `final_cooperation_price` |
 | （派生） | `agreed_price` = 最终合作价格优先，否则解析品牌报价 |
 | `状态` | 经 `mapFeishuStage()` 映射到 `kol_stage` |
 | `建联时间` 等 | `feishu_outreach_at`（多源解析） |

@@ -1066,11 +1066,11 @@ components:
         brandQuote:
           type: string
           nullable: true
-          description: 品牌报价（飞书 品牌报价 栏原文）
+          description: 品牌报价（飞书 品牌报价 栏原文；空则回退 KOL报价($)/合作报价/报价）
         finalCooperationPrice:
           type: number
           nullable: true
-          description: 最终合作价格（飞书 最终合作价格 栏）
+          description: 最终合作价格（飞书 最终合作价格 / 最终报价 栏）
         agreedDeadline:
           type: string
           format: date
