@@ -167,6 +167,8 @@ DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 # 切换默认供应商：改 AI_DEFAULT_PROVIDER 为 deepseek 并填好 DEEPSEEK_API_KEY 即可，不用改代码
 # 各能力（classify/draft/check/translate）到具体模型 ID 的映射在 application.yml 的 maildesk.ai.* 配置里，非敏感信息不放 .env
+# 工作台跨邮箱可读：own_only | leader_only | non_intern（默认）
+WORKBENCH_CROSS_MAILBOX_VISIBILITY=non_intern
 
 # ===== 加密（AES-256 主密钥，base64 编码 32 字节） =====
 TOKEN_ENCRYPTION_KEY=

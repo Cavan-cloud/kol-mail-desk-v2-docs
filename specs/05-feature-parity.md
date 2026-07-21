@@ -136,6 +136,7 @@
   - Phase: P1 | Ticket: P1-T06（后端 ✅）+ P1-T15（前端 ✅）| 后端: `GET /api/v1/workbench?view=mine|pool|all`
   - 验收: 我的 = `owner_user_id = currentUser`；团队池 = `status IN ('unassigned','orphaned')`；全部 = 当前租户全量
   - **本地验收 2026-07-04** ✅
+  - **2026-07-21**：跨邮箱可读默认 `non_intern`（`maildesk.workbench.cross-mailbox-visibility`）；实习生仍仅看本人同步邮件；发信仍用本人 Gmail
 
 - [✅] **每行展示：达人名 / 最近邮件主题 / AI 摘要 / 阶段标签 / 负责人 / 工作流标签 / 优先级标签**
   - Phase: P1（基础）+ P4（AI 摘要）| Ticket: P1-T06, P4-T03

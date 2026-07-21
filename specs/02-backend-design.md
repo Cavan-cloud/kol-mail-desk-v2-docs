@@ -27,6 +27,18 @@
 
 输出：KOL 列表 + 侧栏统计
 
+跨邮箱可读（`maildesk.workbench.cross-mailbox-visibility`，默认 `non_intern`）：
+
+| 取值 | 谁可读他人 Gmail 同步的 `emails` |
+|------|----------------------------------|
+| `own_only` | 无人（仅 `emails.user_id = 当前用户`） |
+| `leader_only` | 仅 `leader` |
+| `non_intern` | 除 `intern` 外全员 |
+
+- 仅影响工作台**读路径**（列表 latest / 详情时间线）；写操作（已读 / 重新分析）仍限本人邮箱。
+- 发信始终用当前用户 Gmail；已有 `owner_user_id` 的达人不会因他人回复被抢归属。
+- 同一 `gmail_message_id` 多行时按查看者去重（优先本人副本）。
+
 关键规则（从旧仓库 `lib/workbench.ts` 迁移）：
 
 ```java

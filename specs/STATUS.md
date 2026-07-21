@@ -9,8 +9,8 @@
 
 | 字段 | 值 |
 |------|-----|
-| 最后更新 | 2026-07-08（Phase 7B 完成 · P7B-T12~T14 月份 chip / 布局壳 / E2E） |
-| 更新者 | Agent — 看板 v1 parity Phase 7B |
+| 最后更新 | 2026-07-21（工作台跨邮箱可读默认 `non_intern`） |
+| 更新者 | Agent — workbench cross-mailbox visibility |
 | Git 提交 | 三仓库首次 commit 已完成并推送到 `github.com/Cavan-cloud/kol-mail-desk-v2-{backend,web,docs}` main 分支 |
 | 项目相对天数 | D0（计划期） |
 | 工作模式 | **multi-root workspace**：`~/code/maildesk-v2.code-workspace`（已创建） |
@@ -217,6 +217,7 @@ Phase 0～6 已完成。详见 [`BACKLOG.md` § Phase 7B](./BACKLOG.md#phase-7b-
 
 | 日期 | 问题 | 根因 | 修复 |
 |------|------|------|------|
+| 2026-07-21 | 工作台看不到他人 Gmail 同步的达人邮件 | 读路径强制 `emails.user_id = 当前用户` | 新增 `maildesk.workbench.cross-mailbox-visibility`（默认 `non_intern`）；非实习生可读跨邮箱；发信不抢已有 `owner_user_id` |
 | 2026-07-18 | 工作台报价栏多为「待确认」，且无最终报价栏 | ① 表头 `报价` contains 可能误伤/`品牌报价` 空单元格未回退 `KOL报价($)`；② 多 tab `putIfAbsent` 先到空价后丢区域表有价行；③ 前端只读 `brandQuote` 且 `finalCooperationPrice==null` 时不渲染 | 后端：单元格级报价回退 + `最终报价` 候选 + `preferRicherPrices` 合并；前端：报价 fallback `agreedPrice`，最终合作价格栏常显（空为待确认）。部署后需再跑飞书全量同步回填 |
 
 | 2026-07-04 | 真实 Google 账号登录后被弹回 `/login`，重试多次都进不去 | Spring Security 默认把 `oauth2Login` 成功后的身份持久化进 `JSESSIONID` HttpSession，后续请求被 `SecurityContextHolderFilter` 恢复的陈旧身份抢占，导致 `SessionCookieAuthenticationFilter`（Redis `MAILDESK_SESSION`）被跳过 → 401 | `SecurityConfig` 增加 `securityContextRepository(new NullSecurityContextRepository())`，禁止 HttpSession 读写认证上下文；详见 `BACKLOG.md` P1-T04 |
